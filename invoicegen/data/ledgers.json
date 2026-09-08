@@ -1,0 +1,105 @@
+{
+  "_comment": "Tally ledger master. The posting engine maps each scenario onto these names; change them here to match a real chart of accounts.",
+
+  "trading": {
+    "purchase_goods": "Purchase - Electrical Goods",
+    "purchase_services": "Purchase - Services",
+    "purchase_import": "Purchase - Imports",
+    "purchase_composition": "Purchase - Composition Dealer",
+    "purchase_urd": "Purchase - Unregistered",
+    "sales_goods": "Sales - Electrical Goods",
+    "sales_services": "Sales - Electrical Services",
+    "sales_export": "Sales - Export",
+    "sales_sez": "Sales - SEZ",
+    "sales_scrap": "Sales - Scrap",
+    "purchase_return": "Purchase Return",
+    "sales_return": "Sales Return"
+  },
+
+  "tax": {
+    "input_cgst": "Input CGST", "input_sgst": "Input SGST",
+    "input_igst": "Input IGST", "input_cess": "Input Cess",
+    "output_cgst": "Output CGST", "output_sgst": "Output SGST",
+    "output_igst": "Output IGST", "output_cess": "Output Cess",
+    "rcm_payable": "GST Payable under RCM",
+    "customs_duty": "Customs Duty",
+    "tcs_payable": "TCS Payable"
+  },
+
+  "charges": {
+    "freight_in": "Freight Inward",
+    "freight_out": "Freight Outward",
+    "packing": "Packing Charges",
+    "insurance": "Insurance Charges",
+    "loading": "Loading and Unloading Charges",
+    "misc": "Miscellaneous Charges",
+    "round_off": "Round Off"
+  },
+
+  "discounts": {
+    "trade_allowed": "Trade Discount Allowed",
+    "trade_received": "Trade Discount Received",
+    "cash_allowed": "Cash Discount Allowed",
+    "cash_received": "Cash Discount Received"
+  },
+
+  "banking": {
+    "cash": "Cash-in-Hand",
+    "petty_cash": "Petty Cash",
+    "bank_primary": "State Bank of India - 40930926740",
+    "bank_secondary": "HDFC Bank - 50200034567891",
+    "bank_charges": "Bank Charges",
+    "interest_income": "Interest Received",
+    "interest_expense": "Interest Paid",
+    "cheque_in_hand": "Cheques in Hand"
+  },
+
+  "expenses": {
+    "direct": [
+      "Carriage Inward", "Wages - Site", "Power and Fuel",
+      "Consumables Consumed", "Site Expenses"
+    ],
+    "indirect": [
+      "Office Rent", "Telephone and Internet", "Printing and Stationery",
+      "Travelling and Conveyance", "Professional Fees",
+      "Repairs and Maintenance", "Advertisement", "Insurance Premium",
+      "Electricity Charges", "Audit Fees"
+    ],
+    "outstanding": "Outstanding Expenses",
+    "prepaid": "Prepaid Expenses",
+    "provision": "Provision for Expenses",
+    "prior_period": "Prior Period Adjustment",
+    "misc": "Miscellaneous Expenses",
+    "reimbursement": "Employee Reimbursement Payable"
+  },
+
+  "assets": {
+    "block": [
+      {"name": "Office Equipment", "rate": 15.0},
+      {"name": "Furniture and Fixtures", "rate": 10.0},
+      {"name": "Plant and Machinery", "rate": 15.0},
+      {"name": "Computers and Peripherals", "rate": 40.0},
+      {"name": "Motor Vehicles", "rate": 15.0},
+      {"name": "Electrical Installations", "rate": 10.0}
+    ],
+    "cwip": "Capital Work in Progress",
+    "accumulated_dep": "Accumulated Depreciation",
+    "depreciation": "Depreciation",
+    "profit_on_sale": "Profit on Sale of Asset",
+    "loss_on_sale": "Loss on Sale of Asset"
+  },
+
+  "control": {
+    "advance_customer": "Advance from Customers",
+    "advance_vendor": "Advance to Suppliers",
+    "employee_advance": "Employee Advance",
+    "bad_debts": "Bad Debts Written Off",
+    "write_back": "Sundry Balances Written Back",
+    "suspense": "Suspense Account"
+  },
+
+  "employees": [
+    "Ramesh Pawar", "Sneha Kulkarni", "Amit Bhosale",
+    "Priya Deshmukh", "Nitin Shinde"
+  ]
+}

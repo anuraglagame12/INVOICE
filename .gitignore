@@ -1,0 +1,48 @@
+# Build output -----------------------------------------------------------
+# The exe is ~47 MB and changes on every rebuild. Anyone can produce it from
+# source with build_exe.bat, so it does not belong in the history.
+build/
+dist/
+*.spec
+*.zip
+*.exe
+
+# Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Generated documents -----------------------------------------------------
+# Every run writes new invoices; they are output, not source.
+out/
+sample_out/
+cycle_out/
+cycle_flat/
+single_pi/
+_doccheck/
+_tables/
+*.pdf
+*.png
+
+# ...but keep the things the program itself needs
+!icon.png
+!icon.ico
+!invoicegen/static/**
+!invoicegen/data/**
+
+# Working notes and scratch ----------------------------------------------
+_stitch/
+tools/
+
+# Editor / OS -------------------------------------------------------------
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+*.bak
+*.pretheme
+*.lineitem
+*.keep

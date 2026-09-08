@@ -1,0 +1,682 @@
+{
+  "_comment": "Buyer master. GSTINs carry a valid GSTN check digit and a real state code, but these are FICTIONAL businesses - do not use them to issue real documents. tally_ledger is the ledger the posting gate should match to; ledger_alias is how the name may appear printed on an invoice (tests GSTIN-first matching, Act II).",
+  "seller": {
+    "name": "ABHIDNYA ENTERPRISES",
+    "gstin": "27ACOPN6109M1Z1",
+    "state": "MAHARASHTRA",
+    "state_code": "27",
+    "addr": [
+      "217, Nana Peth next to Shri Ram Mandir",
+      "Pune, MAHARASHTRA, 411002"
+    ],
+    "mobile": "8668273402",
+    "bank": {
+      "name": "State Bank of India",
+      "account": "40930926740",
+      "ifsc": "SBIN0007159",
+      "branch": "Hingne Khurd, Pune"
+    }
+  },
+  "buyers": [
+    {
+      "name": "Shiv Shambho Electrical",
+      "gstin": "27DVJPP3046L1Z2",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Flat No.6, Hausai Niwas, Near Vitthal Rukmini Mandir",
+        "Bhosari Gavthan, Haveli",
+        "Pune, MAHARASHTRA, 411039"
+      ],
+      "ship": [
+        "PEARL EMINENT, Plot No.37/2, Sapphire Park Road,",
+        "Near Imperium-Sky Garden, Balewadi,",
+        "Pune City West, MAHARASHTRA, 411045"
+      ],
+      "phone": "9922514917",
+      "tally_ledger": "Shiv Shambho Electrical",
+      "ledger_alias": "SHIV SHAMBHO ELECT."
+    },
+    {
+      "name": "Balaji Traders",
+      "gstin": "27AACCB4521F1Z3",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Shop No.12, Laxmi Complex, Market Yard Road",
+        "Gultekdi, Pune, MAHARASHTRA, 411037"
+      ],
+      "ship": [
+        "Warehouse Unit 4, Hadapsar Industrial Estate",
+        "Pune, MAHARASHTRA, 411013"
+      ],
+      "phone": "9823145566",
+      "tally_ledger": "Balaji Traders",
+      "ledger_alias": "BALAJI TRADERS PUNE"
+    },
+    {
+      "name": "Sai Electricals & Hardware",
+      "gstin": "27AAFCS8834K1ZS",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "45, Shivaji Chowk, Near Bus Stand",
+        "Chinchwad, Pune, MAHARASHTRA, 411033"
+      ],
+      "ship": [
+        "45, Shivaji Chowk, Near Bus Stand",
+        "Chinchwad, Pune, MAHARASHTRA, 411033"
+      ],
+      "phone": "9764332211",
+      "tally_ledger": "Sai Electricals and Hardware",
+      "ledger_alias": "SAI ELECTRICALS & HDW"
+    },
+    {
+      "name": "Mahalaxmi Enterprises",
+      "gstin": "27ABKPM2290H1ZH",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Plot 88, Sector 12, PCNTDA",
+        "Nigdi, Pune, MAHARASHTRA, 411044"
+      ],
+      "ship": [
+        "Site Office, Moshi Toll Plaza Road",
+        "Moshi, Pune, MAHARASHTRA, 412105"
+      ],
+      "phone": "9890076543",
+      "tally_ledger": "Mahalaxmi Enterprises",
+      "ledger_alias": "MAHALAXMI ENTP"
+    },
+    {
+      "name": "Vighnaharta Construction Pvt Ltd",
+      "gstin": "27AAGCV6617D1ZA",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "3rd Floor, Kumar Business Centre, Bund Garden Road",
+        "Pune, MAHARASHTRA, 411001"
+      ],
+      "ship": [
+        "Project Site - Riverdale Phase II, Kharadi",
+        "Pune, MAHARASHTRA, 411014"
+      ],
+      "phone": "02026123400",
+      "tally_ledger": "Vighnaharta Construction Pvt Ltd",
+      "ledger_alias": "VIGHNAHARTA CONSTN P LTD"
+    },
+    {
+      "name": "Shree Samarth Electricals",
+      "gstin": "27AKTPS4408R1Z2",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Gala No.7, Ganesh Industrial Estate",
+        "Bhosari MIDC, Pune, MAHARASHTRA, 411026"
+      ],
+      "ship": [
+        "Gala No.7, Ganesh Industrial Estate",
+        "Bhosari MIDC, Pune, MAHARASHTRA, 411026"
+      ],
+      "phone": "9822011234",
+      "tally_ledger": "Shree Samarth Electricals",
+      "ledger_alias": "SHREE SAMARTH ELECT"
+    },
+    {
+      "name": "Nandan Infra Projects Pvt Ltd",
+      "gstin": "27AADCN9912M1ZY",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Office 402, Tech Park One, Yerwada",
+        "Pune, MAHARASHTRA, 411006"
+      ],
+      "ship": [
+        "Warehouse, Survey No.221, Wagholi",
+        "Pune, MAHARASHTRA, 412207"
+      ],
+      "phone": "02067445500",
+      "tally_ledger": "Nandan Infra Projects Pvt Ltd",
+      "ledger_alias": "NANDAN INFRA P LTD"
+    },
+    {
+      "name": "Krishna Electric Store",
+      "gstin": "27BXYPK3357J1ZO",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Shop 3, Sadashiv Peth, Near Tilak Road",
+        "Pune, MAHARASHTRA, 411030"
+      ],
+      "ship": [
+        "Shop 3, Sadashiv Peth, Near Tilak Road",
+        "Pune, MAHARASHTRA, 411030"
+      ],
+      "phone": "9970123456",
+      "tally_ledger": "Krishna Electric Store",
+      "ledger_alias": "KRISHNA ELEC STORE"
+    },
+    {
+      "name": "Pinnacle Facility Services LLP",
+      "gstin": "27AAECP7783G1ZZ",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Unit 9, Ascent Business Hub, Baner Road",
+        "Pune, MAHARASHTRA, 411045"
+      ],
+      "ship": [
+        "Client Site - Amanora Mall, Hadapsar",
+        "Pune, MAHARASHTRA, 411028"
+      ],
+      "phone": "02071234567",
+      "tally_ledger": "Pinnacle Facility Services LLP",
+      "ledger_alias": "PINNACLE FACILITY SERV"
+    },
+    {
+      "name": "Tejas Switchgear Company",
+      "gstin": "27ADQPT5561N1ZJ",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "W-42, MIDC Industrial Area, Chakan Phase II",
+        "Khed, Pune, MAHARASHTRA, 410501"
+      ],
+      "ship": [
+        "W-42, MIDC Industrial Area, Chakan Phase II",
+        "Khed, Pune, MAHARASHTRA, 410501"
+      ],
+      "phone": "9765443322",
+      "tally_ledger": "Tejas Switchgear Company",
+      "ledger_alias": "TEJAS SWITCHGEAR CO"
+    },
+    {
+      "name": "Rajmudra Builders and Developers",
+      "gstin": "27AAHCR2245B1ZP",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Rajmudra House, Karve Nagar",
+        "Pune, MAHARASHTRA, 411052"
+      ],
+      "ship": [
+        "Project Site - Rajmudra Heights, Ambegaon Bk",
+        "Pune, MAHARASHTRA, 411046"
+      ],
+      "phone": "02025446677",
+      "tally_ledger": "Rajmudra Builders and Developers",
+      "ledger_alias": "RAJMUDRA BUILDERS"
+    },
+    {
+      "name": "Deshmukh Electricals",
+      "gstin": "27AJOPD8890C1ZX",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Near Grampanchayat Office, Talegaon Dabhade",
+        "Pune, MAHARASHTRA, 410507"
+      ],
+      "ship": [
+        "Near Grampanchayat Office, Talegaon Dabhade",
+        "Pune, MAHARASHTRA, 410507"
+      ],
+      "phone": "9881234567",
+      "tally_ledger": "Deshmukh Electricals",
+      "ledger_alias": "DESHMUKH ELECT."
+    },
+    {
+      "name": "Surya Electricals",
+      "gstin": "29AABCS9876P1Z6",
+      "state": "KARNATAKA",
+      "state_code": "29",
+      "bill": [
+        "No.114, 4th Cross, Rajajinagar Industrial Town",
+        "Bengaluru, KARNATAKA, 560044"
+      ],
+      "ship": [
+        "No.114, 4th Cross, Rajajinagar Industrial Town",
+        "Bengaluru, KARNATAKA, 560044"
+      ],
+      "phone": "9845012345",
+      "tally_ledger": "Surya Electricals",
+      "ledger_alias": "SURYA ELECTRICALS BLR"
+    },
+    {
+      "name": "Kaveri Power Solutions Pvt Ltd",
+      "gstin": "29AAGCK3312L1ZE",
+      "state": "KARNATAKA",
+      "state_code": "29",
+      "bill": [
+        "Plot 56, Peenya Industrial Area Phase III",
+        "Bengaluru, KARNATAKA, 560058"
+      ],
+      "ship": [
+        "Plot 56, Peenya Industrial Area Phase III",
+        "Bengaluru, KARNATAKA, 560058"
+      ],
+      "phone": "08028394050",
+      "tally_ledger": "Kaveri Power Solutions Pvt Ltd",
+      "ledger_alias": "KAVERI POWER SOLN P LTD"
+    },
+    {
+      "name": "Gujarat Electro Traders",
+      "gstin": "24AAFCG5540M1ZH",
+      "state": "GUJARAT",
+      "state_code": "24",
+      "bill": [
+        "Shop 21, Ratnakala Complex, Ring Road",
+        "Surat, GUJARAT, 395002"
+      ],
+      "ship": [
+        "Shop 21, Ratnakala Complex, Ring Road",
+        "Surat, GUJARAT, 395002"
+      ],
+      "phone": "9925011223",
+      "tally_ledger": "Gujarat Electro Traders",
+      "ledger_alias": "GUJARAT ELECTRO TRDRS"
+    },
+    {
+      "name": "Sardar Switchgears",
+      "gstin": "24ABLPS7729T1ZH",
+      "state": "GUJARAT",
+      "state_code": "24",
+      "bill": [
+        "B-14, GIDC Estate, Vatva",
+        "Ahmedabad, GUJARAT, 382445"
+      ],
+      "ship": [
+        "B-14, GIDC Estate, Vatva",
+        "Ahmedabad, GUJARAT, 382445"
+      ],
+      "phone": "9824567890",
+      "tally_ledger": "Sardar Switchgears",
+      "ledger_alias": "SARDAR SWITCHGEARS"
+    },
+    {
+      "name": "Delhi Electricals Corporation",
+      "gstin": "07AAACD1188E1ZY",
+      "state": "DELHI",
+      "state_code": "07",
+      "bill": [
+        "1204, Bhagirath Palace, Chandni Chowk",
+        "New Delhi, DELHI, 110006"
+      ],
+      "ship": [
+        "1204, Bhagirath Palace, Chandni Chowk",
+        "New Delhi, DELHI, 110006"
+      ],
+      "phone": "01123456789",
+      "tally_ledger": "Delhi Electricals Corporation",
+      "ledger_alias": "DELHI ELECT CORPN"
+    },
+    {
+      "name": "Hind Power Systems",
+      "gstin": "07AAECH6634W1ZO",
+      "state": "DELHI",
+      "state_code": "07",
+      "bill": [
+        "Plot 7, Okhla Industrial Area Phase II",
+        "New Delhi, DELHI, 110020"
+      ],
+      "ship": [
+        "Plot 7, Okhla Industrial Area Phase II",
+        "New Delhi, DELHI, 110020"
+      ],
+      "phone": "01141002200",
+      "tally_ledger": "Hind Power Systems",
+      "ledger_alias": "HIND POWER SYS"
+    },
+    {
+      "name": "Thiru Murugan Electricals",
+      "gstin": "33AABCT4419Q1Z1",
+      "state": "TAMIL NADU",
+      "state_code": "33",
+      "bill": [
+        "18, NSC Bose Road, Parrys Corner",
+        "Chennai, TAMIL NADU, 600001"
+      ],
+      "ship": [
+        "18, NSC Bose Road, Parrys Corner",
+        "Chennai, TAMIL NADU, 600001"
+      ],
+      "phone": "9840123456",
+      "tally_ledger": "Thiru Murugan Electricals",
+      "ledger_alias": "THIRU MURUGAN ELECT"
+    },
+    {
+      "name": "Vaishnavi Energy Systems",
+      "gstin": "36AAGCV1102Y1ZQ",
+      "state": "TELANGANA",
+      "state_code": "36",
+      "bill": [
+        "6-3-249, Road No.1, Banjara Hills",
+        "Hyderabad, TELANGANA, 500034"
+      ],
+      "ship": [
+        "6-3-249, Road No.1, Banjara Hills",
+        "Hyderabad, TELANGANA, 500034"
+      ],
+      "phone": "9848012345",
+      "tally_ledger": "Vaishnavi Energy Systems",
+      "ledger_alias": "VAISHNAVI ENERGY SYS"
+    }
+  ],
+  "unregistered_buyers": [
+    {
+      "name": "Ramesh Kulkarni",
+      "gstin": null,
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Flat 302, Shantiniketan Apartments, Kothrud",
+        "Pune, MAHARASHTRA, 411038"
+      ],
+      "ship": [
+        "Flat 302, Shantiniketan Apartments, Kothrud",
+        "Pune, MAHARASHTRA, 411038"
+      ],
+      "phone": "9922334455",
+      "tally_ledger": "Cash Sales - Unregistered"
+    },
+    {
+      "name": "Sunita Deshpande",
+      "gstin": null,
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Row House 8, Sneh Park, Warje",
+        "Pune, MAHARASHTRA, 411058"
+      ],
+      "ship": [
+        "Row House 8, Sneh Park, Warje",
+        "Pune, MAHARASHTRA, 411058"
+      ],
+      "phone": "9765001122",
+      "tally_ledger": "Cash Sales - Unregistered"
+    },
+    {
+      "name": "Anil Jadhav",
+      "gstin": null,
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Plot 14, Vidya Nagar, Katraj",
+        "Pune, MAHARASHTRA, 411046"
+      ],
+      "ship": [
+        "Plot 14, Vidya Nagar, Katraj",
+        "Pune, MAHARASHTRA, 411046"
+      ],
+      "phone": "9850667788",
+      "tally_ledger": "Cash Sales - Unregistered"
+    }
+  ],
+  "ledgers": {
+    "goods": "Sales - Electrical Goods",
+    "services": "Sales - Electrical Services",
+    "freight": "Freight Outward",
+    "packing": "Packing Charges",
+    "insurance": "Insurance Charges",
+    "loading": "Loading and Unloading Charges"
+  },
+  "godowns": [
+    "Main Store - Nana Peth",
+    "Warehouse - Bhosari",
+    "Site Store - Balewadi"
+  ],
+  "tds_sections": [
+    {
+      "section": "194C",
+      "nature": "Payment to Contractors",
+      "rate": 2.0,
+      "threshold": 30000
+    },
+    {
+      "section": "194J",
+      "nature": "Professional / Technical Services",
+      "rate": 10.0,
+      "threshold": 30000
+    },
+    {
+      "section": "194Q",
+      "nature": "Purchase of Goods",
+      "rate": 0.1,
+      "threshold": 5000000
+    }
+  ],
+  "suppliers": [
+    {
+      "name": "Sanghvi Electricals Pvt Ltd",
+      "gstin": "27AAJCS4471K1ZV",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Gala 12, Bhosari MIDC Road",
+        "Pune, MAHARASHTRA, 411026"
+      ],
+      "ship": [
+        "Gala 12, Bhosari MIDC Road",
+        "Pune, MAHARASHTRA, 411026"
+      ],
+      "phone": "02027121234",
+      "tally_ledger": "Sanghvi Electricals Pvt Ltd",
+      "ledger_alias": "SANGHVI ELECT P LTD"
+    },
+    {
+      "name": "Meghdoot Cables and Wires",
+      "gstin": "27AAGCM8823P1ZQ",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Plot 44, Ranjangaon MIDC",
+        "Pune, MAHARASHTRA, 412220"
+      ],
+      "ship": [
+        "Plot 44, Ranjangaon MIDC",
+        "Pune, MAHARASHTRA, 412220"
+      ],
+      "phone": "9860112233",
+      "tally_ledger": "Meghdoot Cables and Wires",
+      "ledger_alias": "MEGHDOOT CABLES"
+    },
+    {
+      "name": "Sundar Traders",
+      "gstin": "27ABQPS9142R1ZF",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Shop 8, Budhwar Peth",
+        "Pune, MAHARASHTRA, 411002"
+      ],
+      "ship": [
+        "Shop 8, Budhwar Peth",
+        "Pune, MAHARASHTRA, 411002"
+      ],
+      "phone": "9822776655",
+      "tally_ledger": "Sundar Traders",
+      "ledger_alias": "SUNDAR TRADERS"
+    },
+    {
+      "name": "Trimurti Switchgear Industries",
+      "gstin": "27AAECT3390L1ZX",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "J-18, MIDC Bhosari",
+        "Pune, MAHARASHTRA, 411026"
+      ],
+      "ship": [
+        "J-18, MIDC Bhosari",
+        "Pune, MAHARASHTRA, 411026"
+      ],
+      "phone": "02027456789",
+      "tally_ledger": "Trimurti Switchgear Industries",
+      "ledger_alias": "TRIMURTI SWITCHGEAR"
+    },
+    {
+      "name": "Narayan Power Systems",
+      "gstin": "29AAHCN7756T1Z6",
+      "state": "KARNATAKA",
+      "state_code": "29",
+      "bill": [
+        "24, Yeshwanthpur Industrial Suburb",
+        "Bengaluru, KARNATAKA, 560022"
+      ],
+      "ship": [
+        "24, Yeshwanthpur Industrial Suburb",
+        "Bengaluru, KARNATAKA, 560022"
+      ],
+      "phone": "08023374455",
+      "tally_ledger": "Narayan Power Systems",
+      "ledger_alias": "NARAYAN POWER SYS"
+    },
+    {
+      "name": "Lakshmi Copper Products",
+      "gstin": "24AAFCL5523N1ZB",
+      "state": "GUJARAT",
+      "state_code": "24",
+      "bill": [
+        "Plot 91, GIDC Naroda",
+        "Ahmedabad, GUJARAT, 382330"
+      ],
+      "ship": [
+        "Plot 91, GIDC Naroda",
+        "Ahmedabad, GUJARAT, 382330"
+      ],
+      "phone": "9825334411",
+      "tally_ledger": "Lakshmi Copper Products",
+      "ledger_alias": "LAKSHMI COPPER"
+    },
+    {
+      "name": "Himalaya Electricals",
+      "gstin": "06AABCH4417G1ZX",
+      "state": "HARYANA",
+      "state_code": "06",
+      "bill": [
+        "Plot 210, Sector 25, Udyog Vihar",
+        "Gurugram, HARYANA, 122016"
+      ],
+      "ship": [
+        "Plot 210, Sector 25, Udyog Vihar",
+        "Gurugram, HARYANA, 122016"
+      ],
+      "phone": "01244567890",
+      "tally_ledger": "Himalaya Electricals",
+      "ledger_alias": "HIMALAYA ELECT"
+    }
+  ],
+  "composition_dealers": [
+    {
+      "name": "Shreeji Hardware Stores",
+      "gstin": "27AATFS6690D1ZL",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Shop 4, Market Yard",
+        "Pune, MAHARASHTRA, 411037"
+      ],
+      "ship": [
+        "Shop 4, Market Yard",
+        "Pune, MAHARASHTRA, 411037"
+      ],
+      "phone": "9765889900",
+      "tally_ledger": "Shreeji Hardware Stores",
+      "composition": true
+    },
+    {
+      "name": "Krupa Electric Works",
+      "gstin": "27AAVFK1178B1Z6",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Lane 3, Kasba Peth",
+        "Pune, MAHARASHTRA, 411011"
+      ],
+      "ship": [
+        "Lane 3, Kasba Peth",
+        "Pune, MAHARASHTRA, 411011"
+      ],
+      "phone": "9822004455",
+      "tally_ledger": "Krupa Electric Works",
+      "composition": true
+    }
+  ],
+  "foreign_parties": [
+    {
+      "name": "Shenzhen Lumina Lighting Co., Ltd",
+      "gstin": null,
+      "state": "CHINA",
+      "state_code": "96",
+      "bill": [
+        "Block C, Bao'an Industrial Park",
+        "Shenzhen, Guangdong, CHINA 518101"
+      ],
+      "ship": [
+        "Block C, Bao'an Industrial Park",
+        "Shenzhen, Guangdong, CHINA 518101"
+      ],
+      "phone": "+86 755 8123 4567",
+      "tally_ledger": "Shenzhen Lumina Lighting Co Ltd",
+      "country": "CHINA",
+      "currency": "USD",
+      "rate": 86.4
+    },
+    {
+      "name": "Deutsche Elektro GmbH",
+      "gstin": null,
+      "state": "GERMANY",
+      "state_code": "96",
+      "bill": [
+        "Industriestrasse 42",
+        "70565 Stuttgart, GERMANY"
+      ],
+      "ship": [
+        "Industriestrasse 42",
+        "70565 Stuttgart, GERMANY"
+      ],
+      "phone": "+49 711 998877",
+      "tally_ledger": "Deutsche Elektro GmbH",
+      "country": "GERMANY",
+      "currency": "EUR",
+      "rate": 94.2
+    },
+    {
+      "name": "Gulf Power Trading LLC",
+      "gstin": null,
+      "state": "UAE",
+      "state_code": "96",
+      "bill": [
+        "Warehouse 7, Jebel Ali Free Zone",
+        "Dubai, UNITED ARAB EMIRATES"
+      ],
+      "ship": [
+        "Warehouse 7, Jebel Ali Free Zone",
+        "Dubai, UNITED ARAB EMIRATES"
+      ],
+      "phone": "+971 4 883 1122",
+      "tally_ledger": "Gulf Power Trading LLC",
+      "country": "UAE",
+      "currency": "USD",
+      "rate": 86.4
+    }
+  ],
+  "sez_parties": [
+    {
+      "name": "Infotech Park SEZ Unit - Magarpatta",
+      "gstin": "27AAGCV6617D1ZA",
+      "state": "MAHARASHTRA",
+      "state_code": "27",
+      "bill": [
+        "Tower 5, Magarpatta SEZ",
+        "Hadapsar, Pune, MAHARASHTRA, 411013"
+      ],
+      "ship": [
+        "Tower 5, Magarpatta SEZ",
+        "Hadapsar, Pune, MAHARASHTRA, 411013"
+      ],
+      "phone": "02067001234",
+      "tally_ledger": "Infotech Park SEZ Unit",
+      "sez": true
+    }
+  ]
+}
