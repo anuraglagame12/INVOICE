@@ -7,6 +7,12 @@ expected to clear the posting gate.
 
 All money is Decimal; every displayed figure is rounded exactly once, at the
 point it is computed, so the PDF and the ground-truth JSON can never disagree.
+
+Never round a figure part-way through a calculation. A discounted rate rarely
+lands on a whole paisa - 465.00 less 12.5% is exactly 406.875 - and rounding
+that before multiplying by the quantity magnifies the error by the quantity.
+Compute from the exact value and round once, at the end. `check_exact.py`
+enforces this.
 """
 from decimal import Decimal, ROUND_FLOOR, ROUND_HALF_UP
 
@@ -33,6 +39,50 @@ def half_tax(tax):
 
 def fmt(x):
     return f"{money(x):,.2f}"
+
+
+def fmt_signed(x):
+    """Like fmt, but always shows the sign - a round-off may go either way."""
+    v = money(x)
+    return f"{'+' if v > 0 else ''}{v:,.2f}"
+
+
+# ---------------------------------------------------------------- numbering
+
+# A document number has to fit the field an accounting package gives it -
+# Tally's voucher number is the binding case - so nothing longer than this
+# may ever reach a document.
+MAX_NUMBER_LEN = 12
+
+
+def our_number(series, seq, base=26400):
+    """Our own document number, e.g. AE/SI/26401.
+
+    The financial year is left out deliberately: carrying it pushes the
+    number past MAX_NUMBER_LEN, and the year is already implied by the
+    invoice date sitting beside it.
+    """
+    return check_number(f"AE/{series}/{base + seq}")
+
+
+def supplier_number(rng, yy="26"):
+    """A bill numbered by the supplier, in one of their own series."""
+    prefix = rng.choice(["SEP", "INV", "GST", "TI", "BL"])
+    return check_number(f"{prefix}/{yy}/{rng.randint(100, 4999)}")
+
+
+def check_number(num):
+    """Guard: refuse a number too long for the field it has to sit in.
+
+    Raising here rather than truncating is deliberate - a silently shortened
+    number would collide with another document and be far harder to trace
+    than a failure at the point the number is built.
+    """
+    if len(num) > MAX_NUMBER_LEN:
+        raise ValueError(
+            f"document number {num!r} is {len(num)} characters; "
+            f"the limit is {MAX_NUMBER_LEN}")
+    return num
 
 
 # ---------------------------------------------------------------- words
@@ -62,8 +112,15 @@ def _three(n):
 
 
 def rupees_in_words(amount):
-    """Indian numbering (crore / lakh / thousand), matching the source invoice."""
+    """Indian numbering (crore / lakh / thousand), matching the source invoice.
+
+    A credit note, or an advance larger than the bill, gives a negative
+    amount. Spell the magnitude and mark it, rather than feeding a negative
+    into the lookup tables.
+    """
     amt = money(amount)
+    negative = amt < 0
+    amt = -amt if negative else amt
     rupees = int(amt)
     paise = int((amt - rupees) * 100)
     if rupees == 0:
@@ -82,7 +139,7 @@ def rupees_in_words(amount):
         if rest:
             parts.append(_three(rest))
     words = ", ".join(p for p in parts if p)
-    out = f"INR {words} Rupees"
+    out = f"INR {'Minus ' if negative else ''}{words} Rupees"
     if paise:
         out += f" And {_two(paise)} Paise"
     return out + " Only."
@@ -103,12 +160,17 @@ class Line:
 
     def __init__(self, desc, code, mrp, qty, uom, gst, discount_pct=0,
                  kind="goods", cess_pct=0, exempt=False,
-                 stock_item=None, godown=None, batch=None):
+                 stock_item=None, godown=None, batch=None, no_qty=False):
         self.desc = desc
         self.code = code
         self.mrp = money(mrp)
-        self.qty = Decimal(str(qty))
-        self.uom = uom
+        # A service is billed as a lump sum: the invoice shows its SAC and
+        # amount with the quantity and unit columns left empty. The value
+        # still has to be worked out, so qty stays 1 behind the scenes and
+        # only the printed cell goes blank.
+        self.no_qty = no_qty or (kind == "service" and qty is None)
+        self.qty = Decimal("1") if qty is None else Decimal(str(qty))
+        self.uom = "" if self.no_qty else uom
         self.gst = Decimal(str(gst))
         self.discount_pct = Decimal(str(discount_pct))
         self.kind = kind
@@ -124,12 +186,24 @@ class Line:
         return money(self.mrp * self.qty)
 
     @property
+    def _exact_rate(self):
+        """The discounted unit price at full precision, for the maths.
+
+        465.00 less 12.5% is exactly 406.875 - half a paisa. Rounding that
+        before multiplying by the quantity magnifies the half-paisa by the
+        quantity (fifty units turned it into 25 paise), so every value below
+        is computed from this exact figure and rounded once, at the end.
+        """
+        return self.mrp * (1 - self.discount_pct / 100)
+
+    @property
     def rate(self):
-        return money(self.mrp * (1 - self.discount_pct / 100))
+        """The unit rate as printed - rounded for display only."""
+        return money(self._exact_rate)
 
     @property
     def taxable(self):
-        return money(self.rate * self.qty)
+        return money(self._exact_rate * self.qty)
 
     @property
     def tax(self):
@@ -145,7 +219,7 @@ class Line:
 
     @property
     def discount_value(self):
-        return money((self.mrp - self.rate) * self.qty)
+        return money((self.mrp - self._exact_rate) * self.qty)
 
 
 class Charge:
@@ -226,20 +300,29 @@ def build(inv):
     tcs = money(inv.get("tcs_amount", 0))
 
     advance = money(inv.get("advance_adjusted", 0))
-    pre_round = money(gross + tcs - tds - advance)
+    # A cash discount is settlement terms, not a price reduction: tax is
+    # computed on the full value and the discount comes off afterwards.
+    cash_discount = money(inv.get("cash_discount", 0))
+    pre_round = money(gross + tcs - tds - advance - cash_discount)
 
 
-    # round to the nearest rupee, breaking an exact .50 downward so the
-    # adjustment always stays strictly under half a rupee
-    floor = pre_round.to_integral_value(rounding=ROUND_FLOOR)
-    frac = pre_round - floor
-    if frac == Decimal("0.5"):
-        total = floor          # exact half: settle downward
-    elif frac > Decimal("0.5"):
-        total = floor + 1
+    # Round to the nearest rupee, breaking an exact .50 downward so the
+    # adjustment always stays strictly under half a rupee. Turning rounding
+    # off leaves the total at exact paise with no adjustment line, which is
+    # what "no round off" asks for.
+    if inv.get("no_rounding"):
+        total = pre_round
+        round_off = money(0)
     else:
-        total = floor
-    round_off = money(total - pre_round)
+        floor = pre_round.to_integral_value(rounding=ROUND_FLOOR)
+        frac = pre_round - floor
+        if frac == Decimal("0.5"):
+            total = floor          # exact half: settle downward
+        elif frac > Decimal("0.5"):
+            total = floor + 1
+        else:
+            total = floor
+        round_off = money(total - pre_round)
 
     # tax summary grouped by (code, rate), as a GST invoice must show
     summary = {}
@@ -263,6 +346,7 @@ def build(inv):
         "taxable": taxable, "tax": tax, "line_tax": line_tax,
         "charge_tax": charge_tax, "cess": cess, "discount": discount,
         "charges": charge_amt, "gross": gross, "round_off": round_off,
+        "cash_discount": cash_discount,
         "total": total, "reverse_charge": rcm, "tds": tds, "tcs": tcs,
         "advance": advance,
         # split the odd paisa rather than rounding both halves up, or the
@@ -352,6 +436,11 @@ def voucher(inv, t, seller):
     # An advance already received is set off against this bill
     leg("Advance from Customers" if not is_purchase
         else "Advance to Suppliers", t["advance"], not trade_dr)
+
+    # A cash discount is income on a purchase and an expense on a sale, so
+    # it posts opposite the trade side.
+    leg("Discount Received" if is_purchase else "Discount Allowed",
+        t.get("cash_discount", 0), not trade_dr)
 
     # Round off can fall either way; leg() puts it on the correct side
     leg("Round Off", t["round_off"], trade_dr)
@@ -460,6 +549,7 @@ def to_record(inv, t, seller):
             "igst": float(t["igst"]), "cess": float(t["cess"]),
             "other_charges": float(t["charges"]),
             "total_discount": float(t["discount"]),
+            "cash_discount": float(t.get("cash_discount", 0)),
             "tds_deducted": float(t["tds"]), "tcs_collected": float(t["tcs"]),
             "advance_adjusted": float(t["advance"]),
             "round_off": float(t["round_off"]),

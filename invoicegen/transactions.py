@@ -9,7 +9,8 @@ import random
 from datetime import date, timedelta
 from decimal import Decimal
 
-from .model import Charge, Line, half_tax, money
+from .model import (Charge, Line, half_tax, money, our_number,
+                    supplier_number)
 from . import catalogue as cat
 
 FY = "26-27"
@@ -151,9 +152,9 @@ def build_txn(sid, rng, items, parties, ledgers, seq, opts=None):
     # A bill we receive was numbered by the supplier in their own series, so
     # it must not look like one of ours.
     if kind in ("purchase_invoice", "debit_note") and "purchase" in tags:
-        num = f"{rng.choice(['SEP', 'INV', 'GST', 'TI', 'BL'])}/"               f"{FY[:2]}-{FY[3:]}/{rng.randint(100, 4999)}"
+        num = supplier_number(rng, FY[:2])
     else:
-        num = f"AE/{SERIES[kind]}/{FY}/{26400 + seq}"
+        num = our_number(SERIES[kind], seq)
     t = Txn(sid, kind, TITLES[kind], num, d)
     t.meta["scenario_label"] = cat.label(sid)
 
@@ -177,9 +178,15 @@ def _build_document(t, sid, tags, rng, items, parties, ledgers,
     purchase = "purchase" in tags
     trading = ledgers["trading"]
 
-    # export, SEZ, composition and unregistered supplies carry no GST
-    zero = any(k in tags for k in ("export", "sez", "composition",
-                                   "unregistered_party"))
+    # Export, SEZ and composition supplies carry no GST.
+    #
+    # An unregistered party cuts both ways, so which side they sit on decides
+    # the tax. Buying FROM an unregistered supplier: they are not registered,
+    # cannot charge GST, so the bill is nil-rated. Selling TO an unregistered
+    # customer: we are registered, so GST is charged exactly as on any other
+    # sale - the customer simply cannot claim it back.
+    zero = (any(k in tags for k in ("export", "sez", "composition"))
+            or ("unregistered_party" in tags and purchase))
     t.tax_free = zero
     rcm = "rcm" in tags
 
@@ -221,12 +228,15 @@ def _build_document(t, sid, tags, rng, items, parties, ledgers,
                                 rng.choice([450, 850, 1200, 2500]),
                                 ch["freight_in"] if purchase
                                 else ch["freight_out"], code="996511", gst=18))
-    for tag, label, key in (("packing", "Packing Charges", "packing"),
-                            ("insurance", "Insurance Charges", "insurance"),
-                            ("loading", "Loading & Unloading", "loading")):
+    # Charged on our own invoice these are a composite supply, so they carry
+    # the same rate as the goods rather than going out untaxed.
+    for tag, label, key, sac in (
+            ("packing", "Packing Charges", "packing", "998540"),
+            ("insurance", "Insurance Charges", "insurance", "997137"),
+            ("loading", "Loading & Unloading", "loading", "996799")):
         if tag in tags:
             t.charges.append(Charge(label, rng.choice([250, 600, 900]),
-                                    ch[key]))
+                                    ch[key], code=sac, gst=18))
 
     # ---- totals
     taxable = money(sum(l.taxable for l in t.lines))
@@ -257,8 +267,14 @@ def _build_document(t, sid, tags, rng, items, parties, ledgers,
 
     gross = money(taxable + charge_amt + payable_tax + duty
                   + tcs - cash_disc - tds - advance)
-    total = Decimal(int(gross.to_integral_value()))
-    round_off = money(total - gross)
+    # Only the round-off scenario rounds to the rupee; every other document
+    # keeps its exact paise and shows no adjustment line.
+    if "roundoff" in tags:
+        total = Decimal(int(gross.to_integral_value()))
+        round_off = money(total - gross)
+    else:
+        total = gross
+        round_off = money(0)
 
     t.meta.update({
         "taxable": taxable, "charges": charge_amt, "tax": tax,
@@ -270,13 +286,13 @@ def _build_document(t, sid, tags, rng, items, parties, ledgers,
         t.meta["currency"] = party.get("currency", "USD")
         t.meta["exchange_rate"] = party.get("rate", 86.40)
     if "against_order" in tags:
-        t.meta["against_order"] = (
-            f"AE/{'PO' if purchase else 'SO'}/{FY}/{26100 + rng.randint(1, 280)}")
+        t.meta["against_order"] = our_number(
+            "PO" if purchase else "SO", rng.randint(1, 280), 26100)
     if t.kind in ("credit_note", "debit_note"):
         od = t.date - timedelta(days=rng.randint(5, 90))
         t.meta["original_invoice"] = {
-            "number": f"AE/{'PB' if purchase else 'SI'}/{FY}/"
-                      f"{26100 + rng.randint(1, 280)}",
+            "number": our_number("PB" if purchase else "SI",
+                                 rng.randint(1, 280), 26100),
             "date": od.strftime("%d %b %Y"), "date_iso": od.isoformat(),
             "reason": rng.choice(
                 ["Goods returned - damaged in transit",
@@ -383,7 +399,14 @@ def _post_document(t, tags, ledgers, purchase):
     if m["round_off"]:
         t._leg(ch["round_off"], m["round_off"], trade_dr)
 
-    t._leg(t.party["tally_ledger"], m["total"], not trade_dr)
+    # The party side of the entry. An unregistered party has no account of
+    # their own - such a deal is settled in cash - and their ledger name is
+    # written from the sales side, so buying from one would otherwise credit
+    # a sales ledger. Post those to Cash instead, whichever way the goods go.
+    party_led = t.party["tally_ledger"]
+    if "unregistered_party" in tags and purchase:
+        party_led = ledgers["banking"]["cash"]
+    t._leg(party_led, m["total"], not trade_dr)
     t.narration = (f"Being {t.meta['scenario_label'].lower()} vide "
                    f"{t.number}")
 
@@ -464,12 +487,13 @@ def _build_voucher(t, sid, tags, rng, ledgers, parties):
     bills = []
     if "multi_bill" in tags:
         for _ in range(rng.randint(2, 4)):
-            bills.append({"ref": f"AE/{'SI' if is_receipt else 'PB'}/{FY}/"
-                                 f"{26100 + rng.randint(1, 280)}",
+            bills.append({"ref": our_number("SI" if is_receipt else "PB",
+                                            rng.randint(1, 280), 26100),
                           "amount": float(money(amt / rng.randint(2, 4)))})
         amt = money(sum(b["amount"] for b in bills))
     elif "against_bill" in tags:
-        ref = f"AE/{'SI' if is_receipt else 'PB'}/{FY}/{26100 + rng.randint(1, 280)}"
+        ref = our_number("SI" if is_receipt else "PB",
+                         rng.randint(1, 280), 26100)
         full = amt
         if "partial" in tags:
             amt = money(full * Decimal(rng.choice(["0.3", "0.4", "0.5"])))

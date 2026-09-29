@@ -6,7 +6,7 @@ import re
 import shutil
 import tempfile
 
-from .model import Charge, build, rupees_in_words, to_record
+from .model import build, rupees_in_words, to_record
 from .render import render
 from .scenarios import apply_layers, generate as build_invoices, ALL_OPTS
 
@@ -51,14 +51,13 @@ def run(opts, count=20, seed=None, outdir="out", progress=None,
         # TDS/TCS depend on the taxable value, so apply then recompute
         if apply_layers(inv, t, rng, set(opts), parties):
             t = build(inv)
-        # "roundoff" adds a real miscellaneous charge sized so the invoice
-        # lands near half a rupee, giving a clearly visible round-off
+        # "roundoff" nudges one line's rate by a few paise so the invoice
+        # lands near half a rupee and the round-off is clearly visible.
+        # Adjusting a real line keeps the document to the items actually
+        # supplied - an invented "Miscellaneous Charges" line would show up
+        # as a supply that never happened.
         if inv.pop("force_roundoff", False):
-            frac = t["gross"] - int(t["gross"])
-            inv["charges"].append(Charge(
-                "Miscellaneous Charges", _to_half(frac),
-                "Miscellaneous Income"))
-            t = build(inv)
+            t = _nudge_to_half(inv, t)
         t["words"] = rupees_in_words(t["total"])
 
         rec = to_record(inv, t, seller)
@@ -240,12 +239,60 @@ def _next_serial(pdf_dir):
     return top + 1
 
 
-def _to_half(frac):
-    """How much to add so a value ending in `frac` ends near .46 instead."""
+def _nudge_to_half(inv, t):
+    """Shift one line's rate so the invoice lands near half a rupee.
+
+    The round-off line only appears when the total carries awkward paise, so
+    something has to create them. Moving a real line's rate a few paise does
+    it without inventing a charge that was never supplied. The line is picked
+    for having a quantity of 1, so the paise added to the rate land whole on
+    the total; the shift is spread over qty otherwise.
+    """
     from decimal import Decimal
+    from .model import build as _build, money
+
     target = Decimal("0.46")
-    d = target - Decimal(str(frac))
-    return d if d > 0 else d + 1
+    lines = [l for l in inv["lines"] if not getattr(l, "no_qty", False)]
+    if not lines:
+        return t
+    # prefer a qty-1 line so the nudge is exact, else the smallest qty
+    line = min(lines, key=lambda l: (l.qty != 1, l.qty))
+
+    for _ in range(4):
+        frac = t["total"] - int(t["total"]) if inv.get("no_rounding") else \
+            t["gross"] - int(t["gross"])
+        delta = target - Decimal(str(frac))
+        if delta <= 0:
+            delta += 1
+        # the rate carries the shift, so divide it back out over the quantity
+        step = money(delta / line.qty)
+        if step == 0:
+            break
+        line.mrp = money(line.mrp + step)
+        # The ledger split was worked out from the old taxable values, so it
+        # has to follow the line - otherwise the voucher no longer balances.
+        _resplit(inv)
+        t = _build(inv)
+        if t["round_off"]:
+            break
+    return t
+
+
+def _resplit(inv):
+    """Rebuild the ledger split from the lines as they now stand.
+
+    `ledger_split` mirrors the line values, so anything that changes a line
+    after the split was made must rebuild it or Tally sees Dr != Cr.
+    """
+    from decimal import Decimal
+    keys = list(inv["ledger_split"])
+    goods = next((k for k in keys if "Service" not in k), keys[0])
+    serv = next((k for k in keys if "Service" in k), goods)
+    split = {}
+    for l in inv["lines"]:
+        k = serv if l.kind == "service" else goods
+        split[k] = split.get(k, Decimal(0)) + l.taxable
+    inv["ledger_split"] = split
 
 
 def _swap_roles(seller, party):

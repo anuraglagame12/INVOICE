@@ -79,9 +79,15 @@ def expectations(sid, tags, doc_kind):
             r["details"]["total"] - r["details"]["taxable"]
             - r["details"]["charges"]
             - r["details"]["round_off"]) < 0.02))
-    if any(k in tags for k in ("export", "sez", "composition",
-                               "unregistered_party")):
+    # An unregistered party cuts both ways: buying FROM one is nil-rated
+    # because they cannot charge GST, but selling TO one carries GST as
+    # normal - we are registered, and the customer simply cannot claim it.
+    if (any(k in tags for k in ("export", "sez", "composition"))
+            or ("unregistered_party" in tags and "purchase" in tags)):
         checks.append(("carries no GST", lambda r: r["details"]["tax"] == 0))
+    elif "unregistered_party" in tags:
+        checks.append(("still charges GST",
+                       lambda r: r["details"]["tax"] > 0))
 
     # ---- charges and layers
     for tag, label in (("freight", "Freight"), ("packing", "Packing"),

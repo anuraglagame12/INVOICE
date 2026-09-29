@@ -89,6 +89,12 @@
     "loss_on_sale": "Loss on Sale of Asset"
   },
 
+  "capital": {
+    "capital_account": "Capital Account",
+    "opening_balance": "Opening Balance Equity",
+    "reserves": "Reserves and Surplus",
+    "drawings": "Drawings"
+  },
   "control": {
     "advance_customer": "Advance from Customers",
     "advance_vendor": "Advance to Suppliers",

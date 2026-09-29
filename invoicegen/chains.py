@@ -277,10 +277,16 @@ def _rewrite_advance(inv, amount, ref):
     m["advance"] = amount
     m["advance_ref"] = ref
 
-    # rebuild the total from its parts rather than nudging it
+    # rebuild the total from its parts rather than nudging it. Rounding to
+    # the rupee happens only where the document asked for it, matching every
+    # other path - otherwise the exact paise stand and there is no adjustment.
     pre = money(gross - amount)
-    total = Decimal(int(pre.to_integral_value()))
-    m["round_off"] = money(total - pre)
+    if "roundoff" in (inv.meta.get("tags") or []):
+        total = Decimal(int(pre.to_integral_value()))
+        m["round_off"] = money(total - pre)
+    else:
+        total = pre
+        m["round_off"] = money(0)
     m["total"] = total
 
     # Rebuild the three legs the change touches. The round-off leg may not

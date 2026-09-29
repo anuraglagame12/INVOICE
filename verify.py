@@ -59,17 +59,23 @@ def check(path):
     # under RCM neither tax nor cess is collected by the supplier
     tax_in_total = 0.0 if d["reverse_charge"] else split
     cess_in_total = 0.0 if d["reverse_charge"] else t["cess"]
+    # A cash discount is settlement terms, not a price reduction: tax is
+    # charged on the full value and the discount comes off the total after.
     expect = (t["taxable_amount"] + t["other_charges"] + tax_in_total
               + cess_in_total + t["tcs_collected"] - t["tds_deducted"]
-              - t["advance_adjusted"] + t["round_off"])
+              - t["advance_adjusted"] - t.get("cash_discount", 0)
+              + t["round_off"])
     if not close(expect, t["total"]):
         errs.append(f"total {t['total']:.2f} != computed {expect:.2f}")
 
     # round-off never moves more than half a rupee (an exact .50 settles down)
     if abs(t["round_off"]) > 0.5 + TOL:
         errs.append(f"round_off {t['round_off']} out of range")
-    if not close(t["total"], round(t["total"])):
-        errs.append("total is not a whole rupee")
+    # Rounding to the rupee happens only when the invoice asked for it. An
+    # invoice with no round-off keeps its exact paise, so a whole-rupee total
+    # is required only where an adjustment was actually made.
+    if t["round_off"] and not close(t["total"], round(t["total"])):
+        errs.append("total is not a whole rupee despite a round-off")
 
     # --- voucher balances (Dr == Cr, or Tally rejects it)
     v = d["expected_voucher"]

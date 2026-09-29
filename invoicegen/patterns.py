@@ -20,7 +20,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas as pdfcanvas
 
-from .model import fmt, half_tax, money
+from .model import fmt, fmt_signed, half_tax, money
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEVA = os.path.join(HERE, "fonts", "NotoSansDevanagari-Regular.ttf")
@@ -223,7 +223,8 @@ def totals(sh, d, x, y, *, align="r", label="Amount Payable", width=52,
     else:
         rows.append(("CGST", fmt(d.cgst)))
         rows.append(("SGST", fmt(d.sgst)))
-    rows.append(("Round Off", fmt(d.round_off)))
+    if d.round_off:
+        rows.append(("Round Off", fmt_signed(d.round_off)))
     if box:
         sh.box(lbl - 3 * mm, y - (len(rows) + 1) * 4.4 * mm,
                width * mm + 6 * mm, (len(rows) + 2) * 4.4 * mm,
@@ -953,7 +954,8 @@ def p18_landscape(d, path):
         pairs.append(("IGST", fmt(d.igst)))
     else:
         pairs += [("CGST", fmt(d.cgst)), ("SGST", fmt(d.sgst))]
-    pairs.append(("Round Off", fmt(d.round_off)))
+    if d.round_off:
+        pairs.append(("Round Off", fmt_signed(d.round_off)))
     for lbl, v in pairs:
         sh.t(L + 204 * mm, ty, lbl, "Helvetica", 7.5)
         sh.t(Rm, ty, v, "Helvetica", 7.5, align="r")

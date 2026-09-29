@@ -52,15 +52,32 @@ def build_cycle(seed=None):
     bank = led["banking"]
 
     goods = [i for i in items["items"] if i["gst"] == 18][:40]
+    cap = led["capital"]
     out = []
     d = START + timedelta(days=rng.randint(5, 60))
+
+    # ------------------------------------------- 00 Opening Balance
+    # The firm has to be funded before it can pay anyone. Without this
+    # the bank runs negative and the Balance Sheet shows a negative
+    # Capital Account, which no real set of books would.
+    open_bank = money(Decimal(rng.randrange(500000, 900000, 25000)))
+    open_cash = money(Decimal(rng.randrange(40000, 90000, 5000)))
+    open_tot = money(open_bank + open_cash)
+    ob = _mk("journal", "journal", "OPENING BALANCE",
+             f"AE/OB/26400", START)
+    ob.meta["amount"] = open_tot
+    ob.dr(bank["bank_primary"], open_bank)
+    ob.dr(bank["cash"], open_cash)
+    ob.cr(cap["capital_account"], open_tot)
+    ob.narration = "Being opening balances brought forward as on 1 April 2026"
+    out.append(("00", "Opening Balance", ob))
 
     # ---------------------------------------------------------- 01 PO
     po_lines = [Line(g["desc"], g["hsn"], g["mrp"], q, g["uom"], g["gst"],
                      discount_pct=20)
                 for g, q in zip(rng.sample(goods, 4), (20, 15, 30, 10))]
     po = _mk("purchase_order", "purchase_order", "PURCHASE ORDER",
-             f"AE/PO/{FY}/2601", d, supplier)
+             f"AE/PO/26401", d, supplier)
     po.lines = po_lines
     po.meta["order_terms"] = {
         "delivery_date": (d + timedelta(days=14)).isoformat(),
@@ -73,7 +90,7 @@ def build_cycle(seed=None):
     # ---------------------------------------------------- 02 Purchase
     d2 = d + timedelta(days=12)
     pur = _mk("purchase_invoice", "purchase_invoice", "PURCHASE INVOICE",
-              f"AE/PB/{FY}/2602", d2, supplier)
+              f"AE/PB/26402", d2, supplier)
     pur.lines = [Line(l.desc, l.code, l.mrp, l.qty, l.uom, l.gst,
                       discount_pct=l.discount_pct) for l in po_lines]
     pur.charges = [Charge("Freight Charges", 1800, ch["freight_in"],
@@ -87,7 +104,7 @@ def build_cycle(seed=None):
     # ------------------------------------- 03 Purchase Return / DN
     d3 = d2 + timedelta(days=6)
     dn = _mk("debit_note", "debit_note", "DEBIT NOTE",
-             f"AE/DN/{FY}/2603", d3, supplier)
+             f"AE/DN/26403", d3, supplier)
     ret = po_lines[0]
     dn.lines = [Line(ret.desc, ret.code, ret.mrp, money(ret.qty * Decimal("0.25")),
                      ret.uom, ret.gst, discount_pct=ret.discount_pct)]
@@ -104,7 +121,7 @@ def build_cycle(seed=None):
     d4 = d3 + timedelta(days=15)
     due = money(pur.meta["total"] - dn.meta["total"])
     pay = _mk("payment", "payment", "PAYMENT VOUCHER",
-              f"AE/PY/{FY}/2604", d4, supplier)
+              f"AE/PY/26404", d4, supplier)
     pay.meta.update({
         "amount": due, "mode": "NEFT", "instrument": bank["bank_primary"],
         "method": "Agst Ref",
@@ -123,7 +140,7 @@ def build_cycle(seed=None):
     so_lines = [Line(g["desc"], g["hsn"], g["mrp"], q, g["uom"], g["gst"])
                 for g, q in zip(rng.sample(goods, 4), (12, 8, 20, 6))]
     so = _mk("sales_order", "sales_order", "SALES ORDER",
-             f"AE/SO/{FY}/2605", d5, customer)
+             f"AE/SO/26405", d5, customer)
     so.lines = so_lines
     so.meta["order_terms"] = {
         "delivery_date": (d5 + timedelta(days=10)).isoformat(),
@@ -136,7 +153,7 @@ def build_cycle(seed=None):
     # ------------------------------------------------------- 06 Sales
     d6 = d5 + timedelta(days=9)
     sale = _mk("sales_invoice", "sales_invoice", "TAX INVOICE",
-               f"AE/SI/{FY}/2606", d6, customer)
+               f"AE/SI/26406", d6, customer)
     sale.lines = [Line(l.desc, l.code, l.mrp, l.qty, l.uom, l.gst)
                   for l in so_lines]
     sale.charges = [Charge("Freight Charges", 950, ch["freight_out"],
@@ -149,7 +166,7 @@ def build_cycle(seed=None):
     # ----------------------------------------- 07 Sales Return / CN
     d7 = d6 + timedelta(days=5)
     cn = _mk("credit_note", "credit_note", "CREDIT NOTE",
-             f"AE/CN/{FY}/2607", d7, customer)
+             f"AE/CN/26407", d7, customer)
     sret = so_lines[1]
     cn.lines = [Line(sret.desc, sret.code, sret.mrp,
                      money(sret.qty * Decimal("0.5")), sret.uom, sret.gst)]
@@ -166,7 +183,7 @@ def build_cycle(seed=None):
     d8 = d7 + timedelta(days=11)
     recd = money(sale.meta["total"] - cn.meta["total"])
     rcpt = _mk("receipt", "receipt", "RECEIPT VOUCHER",
-               f"AE/RC/{FY}/2608", d8, customer)
+               f"AE/RC/26408", d8, customer)
     rcpt.meta.update({
         "amount": recd, "mode": "Cheque", "instrument": bank["bank_primary"],
         "method": "Agst Ref",
@@ -186,7 +203,7 @@ def build_cycle(seed=None):
     d9 = d8 + timedelta(days=2)
     camt = money(Decimal(rng.randrange(20000, 60000, 500)))
     con = _mk("contra", "contra", "CONTRA VOUCHER",
-              f"AE/CT/{FY}/2609", d9)
+              f"AE/CT/26409", d9)
     con.meta.update({"amount": camt, "mode": "Contra",
                      "instrument": bank["cash"]})
     con.dr(bank["cash"], camt)
@@ -198,7 +215,7 @@ def build_cycle(seed=None):
     d10 = d9 + timedelta(days=3)
     jamt = money(Decimal(rng.randrange(8000, 25000, 500)))
     jv = _mk("journal", "journal", "JOURNAL VOUCHER",
-             f"AE/JV/{FY}/2610", d10)
+             f"AE/JV/26410", d10)
     head = "Office Rent"
     jv.meta["amount"] = jamt
     jv.dr(head, jamt)
@@ -209,7 +226,7 @@ def build_cycle(seed=None):
     # ----------------------------------------------- 11 Stock Journal
     d11 = d10 + timedelta(days=1)
     sj = _mk("stock_journal", "stock_journal", "STOCK JOURNAL",
-             f"AE/SJ/{FY}/2611", d11)
+             f"AE/SJ/26411", d11)
     consumed = po_lines[2]
     produced = po_lines[3]
     sj.meta.update({
@@ -364,28 +381,48 @@ def _reports(vouchers, seller, supplier, customer, led, asof):
     sales = money(-(bal.get(tr["sales_goods"], 0)
                     + bal.get(tr["sales_return"], 0)))
     direct = money(bal.get(led["charges"]["freight_in"], 0))
-    indirect = money(sum(v for k, v in bal.items()
-                         if k in ("Office Rent",
-                                  led["charges"]["freight_out"],
-                                  led["charges"]["round_off"]) and v > 0))
+
+    # Every ledger that is not a balance-sheet account belongs in the P&L.
+    # Listing them by name rather than filtering on sign keeps recovered
+    # income (freight charged out, for instance) from being dropped.
+    bs_led = {led["banking"]["bank_primary"], led["banking"]["cash"],
+              led["capital"]["capital_account"],
+              led["expenses"]["outstanding"],
+              supplier["tally_ledger"], customer["tally_ledger"],
+              tr["purchase_goods"], tr["purchase_return"],
+              tr["sales_goods"], tr["sales_return"],
+              led["charges"]["freight_in"]}
+    bs_led |= {v for k, v in tax.items() if isinstance(v, str)}
+
+    other = [(k, v) for k, v in bal.items() if k not in bs_led]
+    ro = led["charges"]["round_off"]
+    exp_rows = [[k, fmt(v), ""] for k, v in sorted(other)
+                if v > 0 or k == ro]
+    inc_rows = [[k, "", fmt(-v)] for k, v in sorted(other)
+                if v < 0 and k != ro]
+    indirect = money(sum(v for _, v in other))
+
     gross_profit = money(sales - purchases - direct)
     net_profit = money(gross_profit - indirect)
+
+    pl_sections = [
+        ("Trading Account", [
+            ["Sales (net of returns)", "", fmt(sales)],
+            ["Less: Purchases (net of returns)", fmt(purchases), ""],
+            ["Less: Direct Expenses - Freight Inward", fmt(direct), ""],
+            ["Gross Profit", "", fmt(gross_profit)],
+        ]),
+    ]
+    if exp_rows:
+        pl_sections.append(("Indirect Expenses", exp_rows))
+    if inc_rows:
+        pl_sections.append(("Indirect Income", inc_rows))
+
     out.append(("Profit and Loss", {
         "title": "PROFIT AND LOSS ACCOUNT", "subtitle": f"For {period}",
         "columns": [("Particulars", 88, "l"), ("Amount", 46, "r"),
                     ("Total", 46, "r")],
-        "sections": [
-            ("Trading Account", [
-                ["Sales (net of returns)", "", fmt(sales)],
-                ["Less: Purchases (net of returns)", fmt(purchases), ""],
-                ["Less: Direct Expenses - Freight Inward", fmt(direct), ""],
-                ["Gross Profit", "", fmt(gross_profit)],
-            ]),
-            ("Indirect Expenses", [
-                ["Office Rent, Freight Outward and other charges",
-                 fmt(indirect), ""],
-            ]),
-        ],
+        "sections": pl_sections,
         "totals": [["Net Profit for the period", "", fmt(net_profit)]],
         "note": "Prepared from the vouchers in this folder.",
     }))
@@ -396,15 +433,20 @@ def _reports(vouchers, seller, supplier, customer, led, asof):
     gst_net = money(-net) if net < 0 else Decimal(0)
     outstanding = money(-bal.get(led["expenses"]["outstanding"], 0))
     assets = money(cus_bal + bank_bal + cash_bal + gst_net)
+    # Capital is what was actually brought in, plus the profit the period
+    # earned - not a plug. Assets then equal liabilities because every
+    # voucher behind these numbers was itself balanced.
+    opening_cap = money(-bal.get(led["capital"]["capital_account"], 0))
+    capital = money(opening_cap + net_profit)
     liab = money(sup_bal + outstanding + max(net, Decimal(0)))
-    capital = money(assets - liab)
     out.append(("Balance Sheet", {
         "title": "BALANCE SHEET", "subtitle": f"As at {asof:%d %B %Y}",
         "columns": [("Particulars", 88, "l"), ("Amount", 46, "r"),
                     ("Total", 46, "r")],
         "sections": [
             ("Liabilities", [
-                ["Capital Account (balancing figure)", fmt(capital), ""],
+                ["Capital Account", fmt(opening_cap), ""],
+                ["Add: Net Profit for the period", fmt(net_profit), ""],
                 ["Sundry Creditors", fmt(sup_bal), ""],
                 ["Outstanding Expenses", fmt(outstanding), ""],
                 ["GST Payable", fmt(max(net, Decimal(0))), ""],
@@ -418,7 +460,7 @@ def _reports(vouchers, seller, supplier, customer, led, asof):
         ],
         "totals": [["Total Liabilities", "", fmt(money(capital + liab))],
                    ["Total Assets", "", fmt(assets)]],
-        "note": "Capital is the balancing figure for this illustrative set.",
+        "note": "Capital is the amount introduced plus the period's profit. Assets equal liabilities because every voucher behind these figures balances.",
     }))
     return out
 

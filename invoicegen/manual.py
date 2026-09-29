@@ -125,10 +125,11 @@ class ManualForm:
         taxable = money(sum(l.taxable for l in lines))
         charges = money(sum(c.amount for c in chg))
         tax = money(sum(l.tax for l in lines) + sum(c.tax for c in chg))
+        # No rounding: a typed invoice keeps its exact paise, matching every
+        # other tab, so there is no Round Off line to explain.
         gross = money(taxable + charges + tax)
-        total = Decimal(int(gross.to_integral_value()))
         return {"taxable": taxable, "charges": charges, "tax": tax,
-                "round_off": money(total - gross), "total": total,
+                "round_off": money(0), "total": gross,
                 "count": len(lines), "n_charges": len(chg)}
 
 
@@ -142,8 +143,8 @@ def build(form, interstate=None):
     charges = money(sum(c.amount for c in chg))
     tax = money(sum(l.tax for l in lines) + sum(c.tax for c in chg))
     gross = money(taxable + charges + tax)
-    total = Decimal(int(gross.to_integral_value()))
-    round_off = money(total - gross)
+    total = gross
+    round_off = money(0)
 
     # Inter-state when the two GSTINs start with different state codes; if
     # either is missing, assume local.

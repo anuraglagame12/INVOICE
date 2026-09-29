@@ -11,7 +11,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas as pdfcanvas
 
-from .model import fmt, half_tax, money
+from .model import fmt, fmt_signed, half_tax, money
 
 W, H = A4
 L, R = 10 * mm, W - 10 * mm
@@ -133,11 +133,14 @@ class Renderer:
         # right to clear it.
         from .logo import draw as draw_logo
         lx = draw_logo(c, inv.get("logo"), L + 3 * mm, yy + 2 * mm)
-        c.setFont("Helvetica-Bold", 7)
-        c.drawString(L + 3 * mm + lx, yy,
-                     "Buyer (Ordered By):"
-                     if inv.get("letterhead_is_buyer") else "Seller:")
-        yy -= 3.4 * mm
+        if not inv.get("hide_party_label"):
+            c.setFont("Helvetica-Bold", 7)
+            c.drawString(L + 3 * mm + lx, yy,
+                         "Buyer (Ordered By):"
+                         if inv.get("letterhead_is_buyer") else "Seller:")
+            yy -= 3.4 * mm
+        else:
+            yy -= 1.4 * mm
         c.setFont("Helvetica-Bold", 11)
         c.drawString(L + 3 * mm + lx, yy, s["name"])
         yy -= 4.5 * mm
@@ -269,10 +272,17 @@ class Renderer:
         # A Discount column only earns its place when something is discounted;
         # otherwise the item description gets the room instead.
         self.show_disc = any(l.discount_pct for l in self.inv["lines"])
+        # A bill of supply carries no tax, so the Tax Amount column is not
+        # drawn at all rather than printing 0.00 (0%) down the page.
+        self.no_tax = bool(self.inv.get("no_tax")) and not self.t["tax"]
         if self.show_disc:
             #  #   item   HSN    rate   qty   disc%  taxable  tax  amount
-            self.X = [L + 2 * mm, L + 7 * mm, L + 70 * mm, L + 90 * mm,
-                      L + 106 * mm, L + 120 * mm, L + 144 * mm, L + 170 * mm,
+            # The HSN is left-aligned and the rate right-aligned against the
+            # next stop, so the gap between them has to clear an 8-digit code
+            # AND the "Rate / Item" heading above it - at 20mm the two ran
+            # into each other as "HSN/SRAaCte / Item".
+            self.X = [L + 2 * mm, L + 7 * mm, L + 68 * mm, L + 96 * mm,
+                      L + 110 * mm, L + 124 * mm, L + 146 * mm, L + 170 * mm,
                       R - 2 * mm]
         else:
             # the HSN sits left-aligned at 80mm, so the rate that follows
@@ -291,7 +301,8 @@ class Renderer:
         if self.show_disc:
             c.drawRightString(X[5], hy, "Discount")
         c.drawRightString(X[6], hy, "Taxable Value")
-        c.drawRightString(X[7], hy, "IGST" if inter else "Tax Amount")
+        if not self.no_tax:
+            c.drawRightString(X[7], hy, "IGST" if inter else "Tax Amount")
         c.drawRightString(X[8], hy, "Amount")
         y = hy - 2 * mm
         c.line(L, y, R, y)
@@ -300,7 +311,11 @@ class Renderer:
     def row(self, y, i, l):
         c, X = self.c, self.X
         dsize, avail = 7.2, X[2] - X[1] - 2 * mm
-        while dsize > 5.0 and c.stringWidth(l.desc, "Helvetica", dsize) > avail:
+        # An invoice may fix the description size, in which case a long
+        # description wraps onto more lines instead of shrinking.
+        if self.inv.get("desc_size"):
+            dsize = self.inv["desc_size"]
+        while dsize > 5.0 and c.stringWidth(l.desc, "Helvetica", dsize) > avail                 and not self.inv.get("desc_size"):
             dsize -= 0.2
         desc = _wrap(c, l.desc, "Helvetica", dsize, avail)
 
@@ -315,7 +330,9 @@ class Renderer:
         # discount is deducted from gross to reach the taxable value:
         #     rate x qty  -  discount  =  taxable value
         # A charge (freight, packing) has no quantity or unit rate
-        qty_txt = "-" if l.qty is None else f"{l.qty:g} {l.uom}".strip()
+        qty_txt = ("" if getattr(l, "no_qty", False)
+                   else "-" if l.qty is None
+                   else f"{l.qty:g} {l.uom}".strip())
         if self.show_disc:
             c.drawRightString(X[3], base,
                               "-" if l.mrp is None else fmt(l.mrp))
@@ -329,10 +346,12 @@ class Renderer:
                               "-" if l.rate is None else fmt(l.rate))
             c.drawRightString(X[4], base, qty_txt)
         c.drawRightString(X[6], base, fmt(l.taxable))
-        tx = f"{fmt(l.tax)} ({l.gst:g}%)"
-        if l.cess_pct:
-            tx += f" +{fmt(l.cess)} cess"
-        c.drawRightString(X[7], base, tx)
+        # No tax column at all on a bill of supply - see table_head
+        if not self.no_tax:
+            tx = f"{fmt(l.tax)} ({l.gst:g}%)"
+            if l.cess_pct:
+                tx += f" +{fmt(l.cess)} cess"
+            c.drawRightString(X[7], base, tx)
         # Charge.amount is the pre-tax figure (the accounting code posts it
         # that way), so the gross for the Amount column comes from line_total.
         c.drawRightString(X[8], base,
@@ -375,15 +394,21 @@ class Renderer:
         X = self.X
 
         y -= 4 * mm
+        # The charge rows are part of the table now, so this line adds up what
+        # was actually printed above it: items plus charges.
+        n_ch = len(inv.get("charges", []))
         c.setFont("Helvetica-Bold", 7.5)
-        c.drawString(X[0], y, f"Total Items / Qty : {t['count']} / {t['qty']:g}")
+        c.drawString(X[0], y, f"Total Items / Qty : {t['count'] + n_ch}"
+                              f" / {t['qty']:g}")
         c.setFont("Helvetica", 7.5)
         if self.show_disc:
             c.drawRightString(X[5], y, fmt(t["discount"]))
-        c.drawRightString(X[6], y, fmt(t["taxable"]))
-        c.drawRightString(X[7], y, fmt(t["tax"]))
+        c.drawRightString(X[6], y, fmt(money(t["taxable"] + t["charges"])))
+        if not self.no_tax:
+            c.drawRightString(X[7], y, fmt(t["tax"]))
         c.drawRightString(X[8], y,
-                          fmt(money(t["taxable"] + t["tax"] + t["cess"])))
+                          fmt(money(t["taxable"] + t["charges"]
+                                    + t["tax"] + t["cess"])))
         y -= 2 * mm
         c.line(L, y, R, y)
 
@@ -391,42 +416,66 @@ class Renderer:
         sy = y - 5 * mm
         inter = t["interstate"]
         c.setFont("Helvetica-Bold", 7)
+        # A bill of supply has no tax to break down, so the summary shows
+        # value by HSN alone - no CGST/SGST/IGST columns standing empty.
+        no_tax = bool(inv.get("no_tax")) and not t["tax"]
+        width = 60 * mm if no_tax else 112 * mm
         c.drawString(L + 2 * mm, sy, "HSN/SAC")
         c.drawRightString(L + 40 * mm, sy, "Taxable Value")
-        if inter:
+        if no_tax:
+            pass
+        elif inter:
             c.drawRightString(L + 58 * mm, sy, "IGST Rate")
             c.drawRightString(L + 80 * mm, sy, "IGST Amount")
         else:
             c.drawRightString(L + 66 * mm, sy, "CGST")
             c.drawRightString(L + 90 * mm, sy, "SGST")
-        c.drawRightString(L + 110 * mm, sy, "Total Tax")
+        if not no_tax:
+            c.drawRightString(L + 110 * mm, sy, "Total Tax")
         sy -= 1.5 * mm
-        c.line(L, sy, L + 112 * mm, sy)
+        c.line(L, sy, L + width, sy)
         c.setFont("Helvetica", 7)
-        for s in t["summary"]:
-            sy -= 4 * mm
+        head_y = sy
+
+        def draw_summary_row(s, ry, x):
+            """One summary row, its columns offset by `x` from the left."""
             half = half_tax(s["tax"])
-            c.drawString(L + 2 * mm, sy, s["code"])
-            c.drawRightString(L + 40 * mm, sy, fmt(s["taxable"]))
+            c.drawString(x + 2 * mm, ry, s["code"])
+            c.drawRightString(x + 40 * mm, ry, fmt(s["taxable"]))
+            if no_tax:
+                return
             if inter:
-                c.drawRightString(L + 58 * mm, sy, f"{s['gst']:g}%")
-                c.drawRightString(L + 80 * mm, sy, fmt(s["tax"]))
+                c.drawRightString(x + 58 * mm, ry, f"{s['gst']:g}%")
+                c.drawRightString(x + 80 * mm, ry, fmt(s["tax"]))
             else:
-                c.drawRightString(L + 66 * mm, sy,
+                c.drawRightString(x + 66 * mm, ry,
                                   f"{s['gst'] / 2:g}%  {fmt(half)}")
-                c.drawRightString(L + 90 * mm, sy,
+                c.drawRightString(x + 90 * mm, ry,
                                   f"{s['gst'] / 2:g}%  {fmt(half)}")
-            c.drawRightString(L + 110 * mm, sy, fmt(s["tax"]))
+            c.drawRightString(x + 110 * mm, ry, fmt(s["tax"]))
+
+        pitch = getattr(self, "summary_pitch", 4 * mm)
+        if pitch < 3.4 * mm:                  # tighten the type to match
+            c.setFont("Helvetica", 6.2)
+        for s in t["summary"]:
+            sy -= pitch
+            draw_summary_row(s, sy, L)
         sy -= 1.5 * mm
-        c.line(L, sy, L + 112 * mm, sy)
+        c.line(L, sy, L + width, sy)
 
         # totals on the right
         lbl, val = R - 62 * mm, R - 3 * mm
-        rows = [("Taxable Amount", fmt(t["taxable"]))]
-        for ch in inv.get("charges", []):
-            rows.append((ch.label, fmt(ch.amount)))
+        # Charges now print as rows in the item table, so the taxable figure
+        # here must cover them too - t["taxable"] is lines only - and they are
+        # no longer listed separately below, which would double-count them.
+        rows = [("Taxable Amount", fmt(money(t["taxable"] + t["charges"])))]
         if t["reverse_charge"]:
             rows.append(("Tax under RCM (by recipient)", fmt(t["tax"])))
+        elif not t["tax"] and inv.get("no_tax"):
+            # A bill of supply carries no tax at all - an unregistered
+            # supplier cannot collect it. Printing "CGST 0.00" would suggest
+            # tax was charged and came to nothing, so the rows are dropped.
+            pass
         elif t["interstate"]:
             rows.append(("IGST", fmt(t["igst"])))
         else:
@@ -451,7 +500,9 @@ class Renderer:
                          f"({fmt(t['tds'])})"))
         if t["advance"]:
             rows.append(("Less: Advance", f"({fmt(t['advance'])})"))
-        rows.append(("Round Off", fmt(t["round_off"])))
+        # nothing to adjust means no line, as a real invoice would print
+        if t["round_off"]:
+            rows.append(("Round Off", fmt_signed(t["round_off"])))
 
         ty = y - 5 * mm
         c.setFont("Helvetica", 7.5)
@@ -496,12 +547,17 @@ class Renderer:
                          f"Due {bw['due_date']}")
         return wy
 
-    def footer(self):
+    def footer(self, top=None):
         c, s = self.c, self.s
         # A manually entered invoice may carry no bank details at all, so the
         # block is skipped rather than printed empty.
         bk = s.get("bank") or {}
-        by = 58 * mm
+        # The footer normally sits at a fixed height, but a long HSN summary
+        # (an invoice spanning dozens of codes) pushes the totals further
+        # down the page. Start below whatever the block above actually used,
+        # or the two overlap and neither can be read.
+        by = 58 * mm if top is None else min(58 * mm, top - 6 * mm)
+        sign_y = by
         if bk.get("name"):
             c.setFont("Helvetica-Bold", 7.5)
             c.drawString(L + 2 * mm, by, "Bank Details:")
@@ -513,11 +569,13 @@ class Renderer:
                 by -= 3.8 * mm
                 c.drawString(L + 2 * mm, by, ln)
         c.setFont("Helvetica-Bold", 7.5)
-        c.drawRightString(R - 3 * mm, 58 * mm, f"For {s['name']}")
+        c.drawRightString(R - 3 * mm, sign_y, f"For {s['name']}")
         c.setFont("Helvetica", 7.5)
-        c.drawRightString(R - 3 * mm, 38 * mm, "Authorized Signatory")
+        # the signatory sits a fixed drop below the firm name, and the notes
+        # start level with it, so both follow the block above
+        ny = min(38 * mm, sign_y - 20 * mm)
+        c.drawRightString(R - 3 * mm, ny, "Authorized Signatory")
 
-        ny = 38 * mm
         c.setFont("Helvetica-Bold", 7)
         c.drawString(L + 2 * mm, ny, "Notes:")
         c.setFont("Helvetica", 6.2)
@@ -532,12 +590,14 @@ class Renderer:
                     "correct and amount indicated in the documents, represents "
                     "price, actually charged by us and that there is no flow of "
                     "additional consideration directly or indirectly from the "
-                    "buyer. Subject to Pune.")
+                    "buyer. Subject to %s." % self.inv.get("jurisdiction",
+                                                          "Pune"))
         for ln in _wrap(c, note, "Helvetica", 6.2, 105 * mm):
             ny -= 3.2 * mm
             c.drawString(L + 2 * mm, ny, ln)
         c.setFont("Helvetica", 7)
-        c.drawString(L + 2 * mm, 24 * mm, "Receiver's Signature")
+        c.drawString(L + 2 * mm, min(24 * mm, ny - 5 * mm),
+                     "Receiver's Signature")
 
     def page_label(self):
         self.c.setFont("Helvetica", 6.2)
@@ -550,13 +610,23 @@ class Renderer:
 
     def run(self, fixed_total=False):
         c, inv = self.c, self.inv
-        lines = inv["lines"]
+        # Charges are billed like any other supply, so they print as rows in
+        # the item table after the goods, each with its own SAC.
+        lines = list(inv["lines"]) + list(inv.get("charges", []))
 
         # first pass: how many pages? totals block needs ~85mm of room
         self.begin_page()
         y = self.header()
         y = self.table_head(y)
-        need = 85 * mm + 4 * mm * len(self.t["summary"])
+        # The totals block grows with the HSN summary, and the footer sits
+        # under it: bank details, notes and the signature lines need about
+        # 55mm of their own. An invoice spanning dozens of HSN codes has to
+        # reserve the lot, or the summary lands on top of the footer and the
+        # footer runs off the bottom of the page.
+        need = (30 * mm                                   # totals ladder
+                + 4 * mm * len(self.t["summary"])         # one row per HSN
+                + 12 * mm                                 # amount in words
+                + 55 * mm)                                # footer
         i = 0
         while i < len(lines):
             if y - 12 * mm < BOTTOM + (need if i == len(lines) - 1 else 15 * mm):
@@ -575,10 +645,21 @@ class Renderer:
             c.showPage()
             self.begin_page()
             y = self.header()
+            # The continuation page carries the totals and the HSN summary,
+            # not more items, so it gets a column heading only where rows
+            # will actually follow it.
             y = self.table_head(y)
 
-        self.totals_block(y)
-        self.footer()
+        # A summary running to dozens of HSN codes is taller than any page
+        # can hold beside a footer. Shrinking the row pitch keeps the whole
+        # breakdown on one page rather than letting it run off the bottom.
+        self.summary_pitch = 4 * mm
+        room = y - BOTTOM - 42 * mm - 55 * mm
+        n = len(self.t["summary"])
+        if n and room < n * 4 * mm:
+            self.summary_pitch = max(2.6 * mm, room / n)
+
+        self.footer(self.totals_block(y))
         if not fixed_total:
             self.pages_total = self.page
         self.page_label()

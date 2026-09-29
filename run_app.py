@@ -79,6 +79,110 @@ def _fail(msg):
     return 1
 
 
+def _pick_win32(start_at):
+    """Windows' own 'browse for folder' dialog, via the shell API.
+
+    Used in preference to a Tk dialog: the packaged app already runs a GUI
+    loop for its window, and a second Tk root inside it silently fails.
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    shell = ctypes.windll.shell32
+    ole = ctypes.windll.ole32
+    ole.CoInitialize(None)
+    try:
+        BIF_RETURNONLYFSDIRS = 0x0001
+        BIF_NEWDIALOGSTYLE = 0x0040
+        BFFM_INITIALIZED = 1
+        BFFM_SETSELECTIONW = 0x0467
+
+        CB = ctypes.WINFUNCTYPE(ctypes.c_int, wintypes.HWND, wintypes.UINT,
+                                wintypes.LPARAM, wintypes.LPARAM)
+
+        def on_event(hwnd, msg, lp, data):
+            # open the dialog already sitting on the last folder used
+            if msg == BFFM_INITIALIZED and start_at:
+                ctypes.windll.user32.SendMessageW(
+                    hwnd, BFFM_SETSELECTIONW, 1,
+                    ctypes.c_wchar_p(start_at))
+            return 0
+
+        class BROWSEINFOW(ctypes.Structure):
+            _fields_ = [("hwndOwner", wintypes.HWND),
+                        ("pidlRoot", ctypes.c_void_p),
+                        ("pszDisplayName", ctypes.c_wchar_p),
+                        ("lpszTitle", ctypes.c_wchar_p),
+                        ("ulFlags", wintypes.UINT),
+                        ("lpfn", CB),
+                        ("lParam", wintypes.LPARAM),
+                        ("iImage", ctypes.c_int)]
+
+        buf = ctypes.create_unicode_buffer(260)
+        bi = BROWSEINFOW()
+        bi.hwndOwner = None
+        bi.pszDisplayName = ctypes.cast(buf, ctypes.c_wchar_p)
+        bi.lpszTitle = "Where would you like to save the documents?"
+        bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE
+        bi.lpfn = CB(on_event)
+
+        # Declaring the types matters on 64-bit: without them ctypes mangles
+        # the struct pointer and the call fails silently, returning nothing.
+        shell.SHBrowseForFolderW.argtypes = [ctypes.POINTER(BROWSEINFOW)]
+        shell.SHBrowseForFolderW.restype = ctypes.c_void_p
+        shell.SHGetPathFromIDListW.argtypes = [ctypes.c_void_p,
+                                               ctypes.c_wchar_p]
+        pidl = shell.SHBrowseForFolderW(ctypes.byref(bi))
+        if not pidl:
+            return None                       # cancelled
+        path = ctypes.create_unicode_buffer(260)
+        shell.SHGetPathFromIDListW(pidl, path)
+        ole.CoTaskMemFree(pidl)
+        return path.value or None
+    finally:
+        ole.CoUninitialize()
+
+
+def _folder_dialog(start_at=None):
+    """Ask where to save. Returns the chosen folder, or None if cancelled.
+
+    The web server calls this from a worker thread, so the dialog runs on a
+    thread of its own. Driving the app window's own dialog from here would
+    deadlock instead: that one must run on the GUI thread.
+    """
+    import queue
+    import threading
+
+    answer = queue.Queue()
+    start = start_at or os.path.expanduser("~")
+
+    def ask():
+        try:
+            answer.put(_pick_win32(start))
+        except Exception:
+            # any other platform, or the shell call failing
+            try:
+                import tkinter as tk
+                from tkinter import filedialog
+                root = tk.Tk()
+                root.withdraw()
+                root.attributes("-topmost", True)
+                got = filedialog.askdirectory(
+                    parent=root, initialdir=start,
+                    title="Where would you like to save the documents?")
+                root.destroy()
+                answer.put(got or None)
+            except Exception:
+                answer.put(None)
+
+    threading.Thread(target=ask, daemon=True).start()
+    try:
+        got = answer.get(timeout=600)             # ten minutes to choose
+    except Exception:
+        return None
+    return os.path.normpath(got) if got else None
+
+
 def _web(lan):
     """Open the generator in its own application window.
 
@@ -107,10 +211,16 @@ def _web(lan):
         return _browser(srv, local, lan, port)
 
     try:
-        webview.create_window("GST Document Generator", local,
-                              width=1500, height=940,
-                              min_size=(1000, 640),
-                              background_color="#090b14")
+        # the app window cannot download files, so documents are saved to a
+        # folder and the finished message offers to open it
+        from invoicegen import web as _w
+        _w.DESKTOP = True
+        win = webview.create_window("GST Document Generator", local,
+                                    width=1500, height=940,
+                                    min_size=(1000, 640),
+                                    background_color="#090b14")
+
+        _w.PICK_FOLDER = _folder_dialog
         webview.start()
     except Exception:
         # no WebView2 runtime on this machine

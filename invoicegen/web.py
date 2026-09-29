@@ -26,6 +26,65 @@ from .scenarios import PANELS, ALL_OPTS
 
 AUTHOR = ""
 
+# True when the page is shown in the app's own window rather than a browser.
+# That window has no download manager, so documents are saved to a folder
+# instead of offered as a download.
+DESKTOP = False
+
+# Set by the app window to a function that opens a native folder picker and
+# returns the chosen path, or None if the user cancelled. The page cannot do
+# this itself - only the window that owns the dialog can.
+PICK_FOLDER = None
+
+# Where the last batch was saved, offered as the starting point next time.
+LAST_DIR = None
+
+
+def output_dir():
+    """Where saved documents go: Documents\\GST Documents, or the desktop."""
+    home = os.path.expanduser("~")
+    for parent in (os.path.join(home, "Documents"), home):
+        if os.path.isdir(parent):
+            d = os.path.join(parent, "GST Documents")
+            os.makedirs(d, exist_ok=True)
+            return d
+    d = os.path.join(os.getcwd(), "GST Documents")
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def _save_locally(tmp, n, into=None):
+    """Copy a finished batch into a dated folder. Returns its path.
+
+    `into` is the folder the user picked; without one the documents go to
+    Documents\\GST Documents. The batch always lands in its own dated
+    sub-folder, so two runs into the same place never overwrite each other.
+    """
+    global LAST_DIR
+    import datetime
+    parent = into if into and os.path.isdir(into) else output_dir()
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+    dest = os.path.join(parent, "%s (%d)" % (stamp, n))
+    shutil.copytree(tmp, dest)
+    LAST_DIR = parent
+    return dest
+
+
+def open_folder(path):
+    """Show a folder in the file manager, on whichever platform."""
+    import subprocess
+    import sys
+    try:
+        if sys.platform == "win32":
+            os.startfile(path)                                # noqa: S606
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", path])
+        else:
+            subprocess.Popen(["xdg-open", path])
+        return True
+    except Exception:
+        return False
+
 PAGE = r"""<!doctype html>
 <html lang="en" class="h-full">
 <head>
@@ -859,11 +918,39 @@ document.addEventListener('change',sum);
 document.getElementById('count').addEventListener('input',sum);
 pick(tab);
 
+/* URL-safe base64 of a UTF-8 path, which is what /open/ expects */
+function b64url(s){
+  const bytes = new TextEncoder().encode(s);
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_');
+}
+async function openFolder(tok){
+  try { await fetch('/open/' + tok); } catch(e) {}
+}
+
 async function go(){
   const btn=document.getElementById('go'), s=document.getElementById('status');
   const fmt=[]; if(document.getElementById('fpdf').checked) fmt.push('pdf');
   if(document.getElementById('fpng').checked) fmt.push('png');
   const gl=document.getElementById('gl').value, sl=document.getElementById('sl').value;
+
+  /* In the app window, ask where to save before doing the work. A browser
+     has no such dialog and answers null, and the download is offered as
+     usual. Cancelling the dialog cancels the whole thing. */
+  let folder = null;
+  try{
+    const pr = await fetch('/pick-folder');
+    const pj = await pr.json();
+    if (pj.desktop && !pj.folder) {             // user pressed Cancel
+      s.className='max-w-[1720px] mx-auto px-7 pt-3';
+      s.innerHTML='<div class="rounded-xl chip ink3 px-5 py-3 text-[13px] '+
+        'font-semibold">Cancelled — nothing was generated.</div>';
+      return;
+    }
+    folder = pj.folder;
+  }catch(e){}
+
   btn.disabled=true;
   s.className='max-w-[1720px] mx-auto px-7 pt-3';
   s.innerHTML='<div class="rounded-xl bg-brand-600/10 ring-1 ring-brand-500/30 '+
@@ -877,7 +964,7 @@ async function go(){
       detail:{goods_lines:gl==='Any'?null:+gl,
               service_lines:sl==='Any'?null:+sl,
               discount:document.getElementById('disc').checked},
-      form: tab===4?readManual():null };
+      form: tab===4?readManual():null, folder: folder };
     const r=await fetch('/generate',{method:'POST',
       headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!r.ok) throw new Error(await r.text());
@@ -889,9 +976,17 @@ async function go(){
       `<span>Done — <b class="ink">${j.count}</b> document`+
       `${j.count===1?'':'s'}`+
       (j.journals?` (${j.journals} journal entries, data only)`:'')+'</span>'+
-      `<a href="${j.url}" download class="px-5 py-1.5 rounded-lg `+
-      'bg-vib-emerald text-surface-950 text-[12px] font-extrabold '+
-      'hover:brightness-110 transition">DOWNLOAD ZIP</a></div>';
+      // In the app window there is no download manager, so the documents are
+      // already saved and the button just opens the folder holding them.
+      (j.folder
+        ? `<button onclick="openFolder('${b64url(j.folder)}')" `+
+          'class="px-5 py-1.5 rounded-lg bg-vib-emerald text-surface-950 '+
+          'text-[12px] font-extrabold hover:brightness-110 transition">'+
+          'OPEN FOLDER</button>'+
+          `<span class="ink3 text-[11px] font-normal">saved to ${j.folder}</span>`
+        : `<a href="${j.url}" download class="px-5 py-1.5 rounded-lg `+
+          'bg-vib-emerald text-surface-950 text-[12px] font-extrabold '+
+          'hover:brightness-110 transition">DOWNLOAD ZIP</a>')+'</div>';
   }catch(e){
     s.innerHTML='<div class="rounded-xl bg-vib-rose/10 ring-1 ring-vib-rose/30 '+
       `ac-rose px-5 py-3 text-[13px] font-semibold">Failed: ${e.message}</div>`;
@@ -973,6 +1068,34 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, ctype, fh.read(),
                                       {"Cache-Control": "max-age=86400"})
             return self._send(404, "text/plain", b"not found")
+        if path == "/pick-folder":
+            # the app window owns the dialog; a browser has no such thing
+            if not PICK_FOLDER:
+                return self._send(200, "application/json",
+                                  json.dumps({"folder": None,
+                                              "desktop": False}).encode())
+            try:
+                chosen = PICK_FOLDER(LAST_DIR or output_dir())
+            except Exception:
+                chosen = None
+            return self._send(200, "application/json",
+                              json.dumps({"folder": chosen,
+                                          "desktop": True}).encode())
+        if path.startswith("/open/"):
+            import base64
+            try:
+                folder = base64.urlsafe_b64decode(path[6:]).decode("utf-8")
+            except Exception:
+                return self._send(400, "text/plain", b"bad path")
+            # only ever open a batch folder we just wrote, never an arbitrary
+            # path a stray request might name
+            allowed = [output_dir()] + ([LAST_DIR] if LAST_DIR else [])
+            here = os.path.abspath(folder)
+            if not any(here.startswith(os.path.abspath(a)) for a in allowed):
+                return self._send(403, "text/plain", b"refused")
+            ok = open_folder(folder)
+            return self._send(200, "application/json",
+                              json.dumps({"ok": ok}).encode())
         if path.startswith("/zip/"):
             item = self.zips.pop(path[5:], None)
             if not item:
@@ -1096,9 +1219,15 @@ class Handler(BaseHTTPRequestHandler):
             tok = os.urandom(8).hex()
             self.zips[tok] = ("documents_%d.zip" % len(rows), blob)
             journals = sum(1 for r in rows if not r.get("has_pdf", True))
+
+            # In the app window there is no browser download manager, so the
+            # documents are written straight to a folder the user can open.
+            saved = (_save_locally(tmp, len(rows), req.get("folder"))
+                     if DESKTOP else None)
+
             self._send(200, "application/json", json.dumps({
                 "count": len(rows), "journals": journals,
-                "url": "/zip/" + tok}).encode())
+                "url": "/zip/" + tok, "folder": saved}).encode())
         except Exception as e:
             self._send(500, "text/plain", str(e).encode())
         finally:

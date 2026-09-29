@@ -11,7 +11,7 @@ import random
 from datetime import date, timedelta
 from decimal import Decimal
 
-from .model import Line, Charge, money
+from .model import Line, Charge, money, our_number, supplier_number
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "data")
@@ -223,7 +223,8 @@ def make_invoice(rng, opts, items, parties, seq, fy, used_numbers,
         mrp = Decimal(str(sv["mrp"]))
         if big:
             mrp *= rng.choice([3, 5, 8])
-        lines.append(Line(sv["desc"], sv["sac"], mrp, rng.choice([1, 1, 1, 2]),
+        # Billed as a lump sum - SAC and amount, no quantity or unit.
+        lines.append(Line(sv["desc"], sv["sac"], mrp, None,
                           sv["uom"], sv["gst"], kind="service"))
 
     # nil-rated / exempt lines sit alongside taxable ones
@@ -244,7 +245,10 @@ def make_invoice(rng, opts, items, parties, seq, fy, used_numbers,
                 it = rng.choice(pool)
                 lines.append(Line(it["desc"], it["hsn"], it["mrp"],
                                   rng.randint(1, 6), it["uom"], it["gst"]))
-            elif want == 5:
+            elif want == 5 and not fixed_serv:
+                # Only reach for a 5% service when the caller has not
+                # pinned the service count - otherwise filling the slab
+                # would quietly add a second service line.
                 sv = [s for s in services if s["gst"] == 5]
                 if sv:
                     s0 = sv[0]
@@ -257,16 +261,27 @@ def make_invoice(rng, opts, items, parties, seq, fy, used_numbers,
     charges = []
     ch_opts = [o for o in ("freight", "packing", "insurance", "loading")
                if o in opts]
+    # One charge to an invoice. Ticking several kinds decides which ones
+    # can turn up across the batch, not how many land on one document -
+    # real invoices carry a single freight or packing line, not four.
+    if ch_opts and detail.get("single_charge"):
+        ch_opts = [rng.choice(ch_opts)]
+    # A batch built to demonstrate a charge must actually carry one; the
+    # 75% draw is for mixed batches, where a charge turns up now and then.
+    certain = detail.get("always")
     for o in ch_opts:
-        if rng.random() < 0.75:
+        if certain or rng.random() < 0.75:
             amt = rng.choice([250, 450, 600, 850, 1200, 1800, 2500])
             charges.append(Charge(
                 {"freight": "Freight Charges", "packing": "Packing Charges",
                  "insurance": "Insurance Charges",
                  "loading": "Loading & Unloading"}[o],
                 amt, ledgers[o],
-                code="996511" if o == "freight" else None,
-                gst=18 if o == "freight" else 0))
+                # a composite supply: each carries the goods' rate, with its
+                # own SAC as a real invoice would show
+                code={"freight": "996511", "packing": "998540",
+                      "insurance": "997137", "loading": "996799"}[o],
+                gst=18))
 
     # ---- ledger split (goods vs services go to different ledgers)
     split = {}
@@ -285,25 +300,25 @@ def make_invoice(rng, opts, items, parties, seq, fy, used_numbers,
     series = {"tax_invoice": "PB" if buying else "SI",
               "credit_note": "CN", "debit_note": "DN",
               "purchase_order": "PO", "sales_order": "SO"}[doctype]
-    if buying and doctype == "tax_invoice":
-        # a bill we receive was numbered by the supplier, in their series
-        num = (f"{rng.choice(['SEP', 'INV', 'GST', 'TI', 'BL'])}/"
-               f"{fy}/{rng.randint(100, 4999)}")
-    else:
-        num = f"AE/{series}/{fy}/{26400 + seq}"
+    # Numbers come from one place so they can never outgrow the field an
+    # accounting package gives them - see model.MAX_NUMBER_LEN.
+    supplier_billed = buying and doctype == "tax_invoice"
+
+    def next_number():
+        return (supplier_number(rng, fy[:2]) if supplier_billed
+                else our_number(series, seq))
+
+    num = next_number()
     while num in used_numbers:
         seq += 1
-        num = (f"{rng.choice(['SEP', 'INV', 'GST'])}/{fy}/"
-               f"{rng.randint(100, 4999)}"
-               if buying and doctype == "tax_invoice"
-               else f"AE/{series}/{fy}/{26400 + seq}")
+        num = next_number()
     used_numbers.add(num)
 
     # A note must cite the invoice it adjusts, dated earlier than the note.
     orig = None
     if doctype in ("credit_note", "debit_note"):
         od = d - timedelta(days=rng.randint(5, 90))
-        orig = {"number": f"AE/SI/{fy}/{26100 + rng.randint(1, 290)}",
+        orig = {"number": our_number("SI", rng.randint(1, 290), 26100),
                 "date": od.strftime("%d %b %Y"), "date_iso": od.isoformat(),
                 "reason": rng.choice(
                     ["Goods returned - damaged in transit",
@@ -332,7 +347,14 @@ def make_invoice(rng, opts, items, parties, seq, fy, used_numbers,
         "interstate": interstate,
         "reverse_charge": "rcm" in opts and rng.random() < 0.5,
         # ask build() to land the pre-round total near half a rupee
-        "force_roundoff": "roundoff" in opts,
+        # Only some invoices land on an awkward figure, so the
+        # round-off line turns up now and then rather than on every
+        # document - which is what real books look like.
+        "force_roundoff": "roundoff" in opts and (
+            bool(detail.get("always")) or rng.random() < 0.35),
+        # rounding to the rupee happens only when it was asked for, so an
+        # invoice without the option never shows a Round Off line
+        "no_rounding": "roundoff" not in opts,
         "scanned": "scanned" in opts,
         "scan_seed": rng.randint(1, 10**9),
         "place_of_supply": f"{buyer['state_code']}-{buyer['state']}",
@@ -385,6 +407,14 @@ def make_invoice(rng, opts, items, parties, seq, fy, used_numbers,
         inv["irn"] = "".join(rng.choice("0123456789abcdef") for _ in range(64))
     if "advance" in opts and rng.random() < 0.6:
         inv["advance_adjusted"] = rng.choice([1000, 2500, 5000, 10000])
+    # Cash discount comes off the total after GST, so the amount payable
+    # falls below taxable + tax - unlike a line discount, which reduces
+    # the taxable value before tax is worked out.
+    if detail.get("cash_discount") and (detail.get("always")
+                                        or rng.random() < 0.7):
+        inv["cash_discount"] = float(money(
+            Decimal(str(sum(l.taxable for l in lines)))
+            * Decimal(str(rng.choice([1, 2, 2.5]))) / 100))
     if "billwise" in opts:
         inv["bill_wise"] = {
             "method": rng.choice(["New Ref", "Agst Ref"]),

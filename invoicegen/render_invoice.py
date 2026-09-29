@@ -80,6 +80,9 @@ def _build_view(txn, seller):
         "date_iso": txn.date.isoformat(),
         "doc_title": txn.title,
         "is_order": is_order,
+        # a bill of supply carries no tax at all, so the renderer drops the
+        # tax column, the tax summary columns and the CGST/SGST total rows
+        "no_tax": bool(m.get("no_tax")),
         # who stands in the letterhead: on documents we raise ourselves
         # against a supplier we are the buyer, otherwise the seller
         "letterhead_is_buyer": txn.kind in ("purchase_order",
