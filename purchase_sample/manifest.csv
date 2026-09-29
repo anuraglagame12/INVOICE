@@ -1,0 +1,2 @@
+file,invoice_number,invoice_date,buyer,buyer_gstin,supply_type,gst_rates,line_count,taxable,tax_base,cgst,sgst,igst,cess,charges,tds,tcs,total,reverse_charge,post_ready,tags
+Purchase_001_Single_goods_GST_18,INV/26-27/1999,2026-10-21,Sanghvi Electricals Pvt Ltd,27AAJCS4471K1ZV,intra-state,18.0,3,116850.0,116850.0,10516.5,10516.5,0.0,0.0,0.0,0.0,0.0,137883.0,False,True,goods|intra|rate18|tax_invoice

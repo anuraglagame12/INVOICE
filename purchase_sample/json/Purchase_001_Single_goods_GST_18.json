@@ -1,0 +1,210 @@
+{
+  "document_type": "PURCHASE INVOICE",
+  "invoice_number": "INV/26-27/1999",
+  "invoice_date": "21 Oct 2026",
+  "original_invoice": null,
+  "is_order": false,
+  "order_terms": null,
+  "invoice_date_iso": "2026-10-21",
+  "scenario": "intra/rate18/goods",
+  "scenario_tags": [
+    "goods",
+    "intra",
+    "rate18",
+    "tax_invoice"
+  ],
+  "expected_post_ready": true,
+  "expected_exceptions": [],
+  "seller": {
+    "name": "ABHIDNYA ENTERPRISES",
+    "gstin": "27ACOPN6109M1Z1",
+    "pan": "ACOPN6109M",
+    "state_code": "27",
+    "state": "MAHARASHTRA",
+    "address": [
+      "217, Nana Peth next to Shri Ram Mandir",
+      "Pune, MAHARASHTRA, 411002"
+    ]
+  },
+  "buyer": {
+    "name": "Sanghvi Electricals Pvt Ltd",
+    "gstin": "27AAJCS4471K1ZV",
+    "pan": "AAJCS4471K",
+    "state_code": "27",
+    "state": "MAHARASHTRA",
+    "registered": true,
+    "address": [
+      "Gala 12, Bhosari MIDC Road",
+      "Pune, MAHARASHTRA, 411026"
+    ],
+    "tally_ledger": "Sanghvi Electricals Pvt Ltd"
+  },
+  "place_of_supply": "27-MAHARASHTRA",
+  "supply_type": "intra-state",
+  "reverse_charge": false,
+  "reference": "Challan# : AE/DC/262484, Dt: 21.10.2026",
+  "eway_bill": null,
+  "irn": null,
+  "lines": [
+    {
+      "sr": 1,
+      "description": "300mm Wall Mounting Fan High Speed",
+      "hsn_sac": "84145120",
+      "type": "goods",
+      "stock_item": "300mm Wall Mounting Fan High Speed",
+      "godown": null,
+      "batch": null,
+      "mrp": 2280.0,
+      "gross_amount": 45600.0,
+      "discount_pct": 0.0,
+      "discount_amount": 0.0,
+      "rate": 2280.0,
+      "qty": 20.0,
+      "uom": "PCS",
+      "taxable_value": 45600.0,
+      "gst_rate": 18.0,
+      "tax_amount": 8208.0,
+      "cgst": 4104.0,
+      "sgst": 4104.0,
+      "igst": 0.0,
+      "cess_pct": 0.0,
+      "cess_amount": 0.0,
+      "amount": 53808.0,
+      "exempt": false
+    },
+    {
+      "sr": 2,
+      "description": "Cat6 UTP LAN Cable 305m Box",
+      "hsn_sac": "85444299",
+      "type": "goods",
+      "stock_item": "Cat6 UTP LAN Cable 305m Box",
+      "godown": null,
+      "batch": null,
+      "mrp": 8450.0,
+      "gross_amount": 42250.0,
+      "discount_pct": 0.0,
+      "discount_amount": 0.0,
+      "rate": 8450.0,
+      "qty": 5.0,
+      "uom": "BOX",
+      "taxable_value": 42250.0,
+      "gst_rate": 18.0,
+      "tax_amount": 7605.0,
+      "cgst": 3802.5,
+      "sgst": 3802.5,
+      "igst": 0.0,
+      "cess_pct": 0.0,
+      "cess_amount": 0.0,
+      "amount": 49855.0,
+      "exempt": false
+    },
+    {
+      "sr": 3,
+      "description": "Earthing Rod Copper Bonded 1m 17mm",
+      "hsn_sac": "85354090",
+      "type": "goods",
+      "stock_item": "Earthing Rod Copper Bonded 1m 17mm",
+      "godown": null,
+      "batch": null,
+      "mrp": 1450.0,
+      "gross_amount": 29000.0,
+      "discount_pct": 0.0,
+      "discount_amount": 0.0,
+      "rate": 1450.0,
+      "qty": 20.0,
+      "uom": "PCS",
+      "taxable_value": 29000.0,
+      "gst_rate": 18.0,
+      "tax_amount": 5220.0,
+      "cgst": 2610.0,
+      "sgst": 2610.0,
+      "igst": 0.0,
+      "cess_pct": 0.0,
+      "cess_amount": 0.0,
+      "amount": 34220.0,
+      "exempt": false
+    }
+  ],
+  "other_charges": [],
+  "tax_summary": [
+    {
+      "hsn_sac": "84145120",
+      "gst_rate": 18.0,
+      "taxable_value": 45600.0,
+      "tax_amount": 8208.0,
+      "cess_amount": 0.0
+    },
+    {
+      "hsn_sac": "85354090",
+      "gst_rate": 18.0,
+      "taxable_value": 29000.0,
+      "tax_amount": 5220.0,
+      "cess_amount": 0.0
+    },
+    {
+      "hsn_sac": "85444299",
+      "gst_rate": 18.0,
+      "taxable_value": 42250.0,
+      "tax_amount": 7605.0,
+      "cess_amount": 0.0
+    }
+  ],
+  "tds": {
+    "applicable": false
+  },
+  "bill_wise": null,
+  "totals": {
+    "taxable_amount": 116850.0,
+    "cgst": 10516.5,
+    "sgst": 10516.5,
+    "igst": 0.0,
+    "cess": 0.0,
+    "other_charges": 0.0,
+    "total_discount": 0.0,
+    "tds_deducted": 0.0,
+    "tcs_collected": 0.0,
+    "advance_adjusted": 0.0,
+    "round_off": 0.0,
+    "total": 137883.0,
+    "amount_payable": 137883.0,
+    "total_items": 3,
+    "total_qty": 45.0,
+    "gst_rates_present": [
+      18.0
+    ],
+    "amount_in_words": "INR One Lakh, Thirty Seven Thousand, Eight Hundred Eighty Three Rupees Only."
+  },
+  "expected_voucher": {
+    "voucher_type": "Purchase",
+    "voucher_date": "2026-10-21",
+    "party_ledger": "Sanghvi Electricals Pvt Ltd",
+    "narration": "Being purchase vide invoice INV/26-27/1999",
+    "entries": [
+      {
+        "ledger": "Purchase - Electrical Goods",
+        "dr": 116850.0,
+        "cr": 0.0
+      },
+      {
+        "ledger": "Input CGST",
+        "dr": 10516.5,
+        "cr": 0.0
+      },
+      {
+        "ledger": "Input SGST",
+        "dr": 10516.5,
+        "cr": 0.0
+      },
+      {
+        "ledger": "Sanghvi Electricals Pvt Ltd",
+        "dr": 0.0,
+        "cr": 137883.0
+      }
+    ],
+    "total_dr": 137883.0,
+    "total_cr": 137883.0,
+    "balanced": true,
+    "posts_to_tally": true
+  },
+  "file": "Purchase_001_Single_goods_GST_18"
+}
